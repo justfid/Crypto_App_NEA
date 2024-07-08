@@ -1,7 +1,7 @@
 import tkinter as tk
 import requests
 import sqlite3
-#import matplotlib
+import matplotlib
 
 class App(tk.Tk):
     def __init__(self):
