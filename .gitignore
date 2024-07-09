@@ -1,3 +1,4 @@
 .venv/
 merge.py
 test.py
+__pycache__/
