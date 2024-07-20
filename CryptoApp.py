@@ -62,9 +62,8 @@ class CryptoTrackerApp(tk.Tk):
         self.__pages_stack.append(price_tracker_page)
         price_tracker_page.tkraise()
 
-    
     def go_back(self):
-        """removes froms stack, and goes back to previous page"""
+        """removes froms stack, and goes back to previous page - Can exit the whole app if used from the login page"""
         if len(self.__pages_stack) > 1:
             current_page = self.__pages_stack.pop()
             current_page.destroy()
@@ -94,22 +93,25 @@ class LoginPage(tk.Frame):
         self.master = master
         
         self.grid_rowconfigure(0, weight=1)
-        self.grid_rowconfigure(4, weight=1)
+        self.grid_rowconfigure(5, weight=1)
         self.grid_columnconfigure(0, weight=1)
-
         self.create_widgets()
 
     def create_widgets(self):
-        """creates login page buttons and widgets"""
         title_font = tkfont.Font(family="Arial", size=16, weight="bold")
         title = tk.Label(self, text="Login Page", font=title_font, bg="#947E9E", fg="#FFFFFF", padx=10, pady=5)
-        title.grid(row=1, column=0, sticky="ew", padx=10, pady=10)
+        title.grid(row=1, column=0, sticky="ew", padx=10, pady=50)
 
-        login_button = tk.Button(self, text="Login", bg="#333940", fg="#FFEB3B", font=("Arial", 14), padx=20, pady=10, command=self.login)
-        login_button.grid(row=2, column=0, pady=20)
+        button_style = {"bg": "#333940", "fg": "#FFEB3B", "font": ("Arial", 14), "padx": 20, "pady": 10, "width": 10}
 
-        signup_button = tk.Button(self, text="Signup", bg="#333940", fg="#FFEB3B", font=("Arial", 14), padx=20, pady=10, command=self.signup)
-        signup_button.grid(row=3, column=0, pady=20)
+        login_button = tk.Button(self, text="Login", command=self.login, **button_style)
+        login_button.grid(row=2, column=0, pady=10)
+
+        signup_button = tk.Button(self, text="Signup", command=self.signup, **button_style)
+        signup_button.grid(row=3, column=0, pady=10)
+
+        exit_button = tk.Button(self, text="Exit", command=self.exit_app, **button_style)
+        exit_button.grid(row=4, column=0, pady=10)
 
     def login(self):
         """once button is pressed, this method is called. Logs user in"""
@@ -118,13 +120,16 @@ class LoginPage(tk.Frame):
             username, password = dialog.result
             #console output
             #print(f"Login attempted with username: {username} and password: {'*' * len(password)}")
-            # TODO implement login verification
+            #TODO implement login verification
             self.master.show_home_page()
 
     def signup(self):
         """allows user to make account. Called when button pressed"""
         #TODO add ability to make new accounts
         messagebox.showinfo("Signup", "Signup functionality not implemented yet.")
+
+    def exit_app(self):
+        self.master.go_back()
 
 
 class HomePage(tk.Frame):
@@ -154,7 +159,7 @@ class HomePage(tk.Frame):
             ("Portfolio Manager", None),
             ("Fiat Converter", None),
             ("Notes", None),
-            ("Settings", None)
+            ("Log Out", self.log_out)
         ]
 
         for button_index, (button_text, command) in enumerate(buttons):
@@ -177,6 +182,10 @@ class HomePage(tk.Frame):
 
     def open_price_tracker(self):
         self.master.show_price_tracker_page()
+
+    def log_out(self):
+        self.master.go_back()
+        messagebox.showinfo("Log Out", "Log Out Successful")
 
 
 class PriceTrackerPage(tk.Frame):
@@ -254,3 +263,5 @@ class PriceTrackerPage(tk.Frame):
 if __name__ == "__main__":
     app = CryptoTrackerApp()
     app.mainloop()
+
+
