@@ -30,8 +30,8 @@ class CryptoTrackerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Crypto Price Tracker")
-        self.geometry("800x600")
-        self.minsize(700, 500)
+        self.geometry("1280x720")
+        self.minsize(800, 450)
         self.configure(bg="#607D8B")
         
         self.grid_rowconfigure(0, weight=1)
@@ -61,6 +61,12 @@ class CryptoTrackerApp(tk.Tk):
         price_tracker_page.grid(row=0, column=0, sticky="nsew")
         self.__pages_stack.append(price_tracker_page)
         price_tracker_page.tkraise()
+
+    def show_portfolio_overview_page(self):
+        portfolio_overview_page = PortfolioOverviewPage(self)
+        portfolio_overview_page.grid(row=0, column=0, sticky="nsew")
+        self.__pages_stack.append(portfolio_overview_page)
+        portfolio_overview_page.tkraise()
 
     def go_back(self):
         """removes froms stack, and goes back to previous page - Can exit the whole app if used from the login page"""
@@ -156,7 +162,7 @@ class HomePage(tk.Frame):
         #list of tuples of button name and command
         buttons = [
             ("Price Tracker", self.open_price_tracker),
-            ("Portfolio Manager", None),
+            ("Portfolio Manager", self.open_portfolio_overview),
             ("Fiat Converter", None),
             ("Notes", None),
             ("Log Out", self.log_out)
@@ -182,6 +188,9 @@ class HomePage(tk.Frame):
 
     def open_price_tracker(self):
         self.master.show_price_tracker_page()
+    
+    def open_portfolio_overview(self):
+        self.master.show_portfolio_overview_page()
 
     def log_out(self):
         self.master.go_back()
@@ -235,11 +244,10 @@ class PriceTrackerPage(tk.Frame):
         top_coins_label.pack(pady=(0, 10))
 
         #headers for the coin list (TODO edit later)
-        coin_list = ttk.Treeview(top_coins_frame, columns=("Rank", "Name", "Price", "24h Change"), show="headings", height=10)
-        coin_list.heading("Rank", text="Rank")
-        coin_list.heading("Name", text="Name")
-        coin_list.heading("Price", text="Price")
-        coin_list.heading("24h Change", text="24h Change")
+        columns=("Rank", "Name", "Price", "24h Change")
+        coin_list = ttk.Treeview(top_coins_frame, columns=columns, show="headings", height=10)
+        for col in columns:
+            coin_list.heading(col, text=col)
         coin_list.pack(fill=tk.BOTH, expand=True)
 
         #configures grid
@@ -254,10 +262,72 @@ class PriceTrackerPage(tk.Frame):
         #can remove this message box later - once ik it works
         messagebox.showinfo("Refresh", "Refresh Successful")
 
-    def update_coin_list(self, coins_data):
-        """updates coin list with real data from APIs"""
-        #TODO implement this once APIs working
-        ...
+
+class PortfolioOverviewPage(tk.Frame):
+    def __init__(self, master):
+        super().__init__(master, bg="#607D8B")
+        self.master = master
+        self.create_widgets()
+
+    def create_widgets(self):
+        title_label = tk.Label(self, text="Portfolio Overview", font=("Arial", 24), bg="#947E9E", fg="white", padx=10, pady=5)
+        title_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+
+        #button frame for other buttons
+        buttons_frame = tk.Frame(self, bg="#607D8B")
+        buttons_frame.grid(row=0, column=1, sticky="ne", padx=10, pady=10)
+
+        #in each tuple: button_name, command
+        other_buttons = [
+            ("Graphs", None),
+            ("Badges", None),
+            ("Filters", None),
+            ("Sort By", None)
+        ]
+        for index, (text, command) in enumerate(other_buttons):
+            btn = tk.Button(buttons_frame, text=text, bg="#333940", fg="#FFEB3B", 
+                            font=("Arial", 13), padx=11, pady=6, width=9, command=command)
+            btn.grid(row=0, column=index, padx=2, pady=5)
+
+        #back and refresh button frame
+        back_refresh_frame = tk.Frame(self, bg="#607D8B")
+        back_refresh_frame.grid(row=1, column=0, columnspan=2, sticky="ew", padx=10, pady=(0, 10))
+
+        #back and refresh buttons
+        back_btn = tk.Button(back_refresh_frame, text="Back", bg="#333940", fg="#FFEB3B", 
+                             font=("Arial", 10), padx=8, pady=4, width=8, command=self.go_back)
+        back_btn.grid(row=0, column=0, padx=(0, 10), pady=5, sticky="w")
+
+        refresh_btn = tk.Button(back_refresh_frame, text="Refresh", bg="#333940", fg="#FFEB3B", 
+                                font=("Arial", 10), padx=8, pady=4, width=8, command=self.refresh_data)
+        refresh_btn.grid(row=0, column=1, padx=(0, 10), pady=5, sticky="w")
+
+        #top coins section
+        portfolio_frame = tk.Frame(self, bg="#333940", padx=10, pady=10)
+        portfolio_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
+
+        portfolio_label = tk.Label(portfolio_frame, text="Portfolio", font=("Arial", 18), bg="#333940", fg="#FFEB3B")
+        portfolio_label.pack(pady=(0, 10))
+
+        #headers for the coin list (TODO edit later)
+        columns=("Rank", "Name", "Price", "24h Change")
+        portfolio_list = ttk.Treeview(portfolio_frame, columns=columns, show="headings", height=10)
+        for col in columns:
+            portfolio_list.heading(col, text=col)
+        portfolio_list.pack(fill=tk.BOTH, expand=True)
+
+        #configures grid
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
+
+    def go_back(self):
+        self.master.go_back()
+
+    def refresh_data(self):
+        self.master.refresh_page()
+        #can remove this message box later - once ik it works
+        messagebox.showinfo("Refresh", "Refresh Successful")
+
 
 #runs application
 if __name__ == "__main__":
