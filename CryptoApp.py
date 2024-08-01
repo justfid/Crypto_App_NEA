@@ -68,6 +68,12 @@ class CryptoTrackerApp(tk.Tk):
         self.__pages_stack.append(portfolio_overview_page)
         portfolio_overview_page.tkraise()
 
+    def show_fiat_converter_page(self):
+        fiat_converter_page = FiatConverterPage(self)
+        fiat_converter_page.grid(row=0, column=0, sticky="nsew")
+        self.__pages_stack.append(fiat_converter_page)
+        fiat_converter_page.tkraise()
+
     def go_back(self):
         """removes froms stack, and goes back to previous page - Can exit the whole app if used from the login page"""
         if len(self.__pages_stack) > 1:
@@ -91,8 +97,8 @@ class CryptoTrackerApp(tk.Tk):
         new_page.grid(row=0, column=0, sticky="nsew")
         self.__pages_stack.append(new_page)
         new_page.tkraise()
-
-
+    
+    
 class LoginPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master, bg="#607D8B")
@@ -163,7 +169,7 @@ class HomePage(tk.Frame):
         buttons = [
             ("Price Tracker", self.open_price_tracker),
             ("Portfolio Manager", self.open_portfolio_overview),
-            ("Fiat Converter", None),
+            ("Fiat Converter", self.open_fiat_converter),
             ("Notes", None),
             ("Log Out", self.log_out)
         ]
@@ -191,6 +197,9 @@ class HomePage(tk.Frame):
     
     def open_portfolio_overview(self):
         self.master.show_portfolio_overview_page()
+
+    def open_fiat_converter(self):
+        self.master.show_fiat_converter_page()
 
     def log_out(self):
         self.master.go_back()
@@ -327,6 +336,107 @@ class PortfolioOverviewPage(tk.Frame):
         self.master.refresh_page()
         #can remove this message box later - once ik it works
         messagebox.showinfo("Refresh", "Refresh Successful")
+
+
+class FiatConverterPage(tk.Frame):
+    def __init__(self, master):
+        super().__init__(master, bg="#607D8B")
+        self.master = master
+        self.currency1 = "Currency 1"
+        self.currency2 = "Currency 2"
+        self.create_widgets()
+
+    def create_widgets(self):
+        #title and buttons at top
+        top_frame = tk.Frame(self, bg="#607D8B")
+        top_frame.pack(fill=tk.X, padx=10, pady=10)
+
+        title_frame = tk.Frame(top_frame, bg="#947E9E")
+        title_frame.pack(side=tk.LEFT)
+
+        title_label = tk.Label(title_frame, text="Fiat\nConverter", font=("Arial", 18), bg="#947E9E", fg="white", padx=10, pady=5)
+        title_label.pack(side=tk.LEFT)
+
+        back_btn = tk.Button(top_frame, text="Back", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, command=self.go_back)
+        back_btn.pack(side=tk.LEFT, padx=5)
+
+        buttons_frame = tk.Frame(top_frame, bg="#607D8B")
+        buttons_frame.pack(side=tk.RIGHT)
+
+        presets_btn = tk.Button(buttons_frame, text="Presets", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, width=12)
+        presets_btn.pack(side=tk.LEFT, padx=5)
+
+        change_pairing_btn = tk.Button(buttons_frame, text="Change\nPairing", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, width=12)
+        change_pairing_btn.pack(side=tk.LEFT, padx=5)
+
+        #dark grey frame
+        content_frame = tk.Frame(self, bg="#333940")
+        content_frame.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
+
+        #currency pair label
+        self.pair_label = tk.Label(content_frame, text=f"{self.currency1} - {self.currency2}", font=("Arial", 16, "bold"), bg="#333940", fg="#FFEB3B")
+        self.pair_label.pack(pady=(20, 10))
+
+        #white content area with dark grey border
+        white_area = tk.Frame(content_frame, bg="white", highlightbackground="#333940", highlightthickness=5)
+        white_area.pack(expand=True, fill=tk.BOTH, padx=5, pady=5)
+
+        #conversion ratio
+        ratio_label = tk.Label(white_area, text="Ratio 1:X", font=("Arial", 12), bg="#4682B4", fg="white", padx=5, pady=2)
+        ratio_label.pack(pady=(20, 10))
+
+        #conversion frame
+        conversion_frame = tk.Frame(white_area, bg="white")
+        conversion_frame.pack(pady=20)
+
+        #input to convert
+        input_frame = tk.Frame(conversion_frame, bg="#4682B4", padx=10, pady=10)
+        input_frame.grid(row=0, column=0, padx=5)
+        
+        input_label = tk.Label(input_frame, text="Enter Amount", bg="#4682B4", fg="white", font=("Arial", 12))
+        input_label.pack()
+        
+        self.input_entry = tk.Entry(input_frame, font=("Arial", 12), width=15)
+        self.input_entry.pack(pady=(5, 0))
+
+        #equal sign
+        equal_label = tk.Label(conversion_frame, text="=", font=("Arial", 16, "bold"), bg="white", fg="black")
+        equal_label.grid(row=0, column=1, padx=10)
+
+        #output after conversion
+        output_frame = tk.Frame(conversion_frame, bg="#4682B4", padx=10, pady=10)
+        output_frame.grid(row=0, column=2, padx=5)
+        
+        result_label = tk.Label(output_frame, text="Result", bg="#4682B4", fg="white", font=("Arial", 12))
+        result_label.pack()
+        
+        self.output_entry = tk.Entry(output_frame, font=("Arial", 12), width=15, state="readonly")
+        self.output_entry.pack(pady=(5, 0))
+
+        #currency labels and swap button
+        currency_frame = tk.Frame(white_area, bg="white")
+        currency_frame.pack(pady=10)
+
+        self.currency1_btn = tk.Button(currency_frame, text=self.currency1, bg="#4682B4", fg="white", font=("Arial", 12), width=10)
+        self.currency1_btn.grid(row=0, column=0, padx=5)
+
+        swap_btn = tk.Button(currency_frame, text="Swap", bg="#4682B4", fg="white", font=("Arial", 12), width=10)
+        swap_btn.grid(row=0, column=1, padx=5)
+
+        self.currency2_btn = tk.Button(currency_frame, text=self.currency2, bg="#4682B4", fg="white", font=("Arial", 12), width=10)
+        self.currency2_btn.grid(row=0, column=2, padx=5)
+
+    def go_back(self):
+        self.master.go_back()
+
+    def update_currencies(self, currency1, currency2):
+        """Updates the currencies chosen to relfect new ones"""
+        #TODO add functionality
+        # self.currency1 = currency1
+        # self.currency2 = currency2
+        # self.pair_label.config(text=f"{self.currency1} - {self.currency2}")
+        # self.currency1_btn.config(text=self.currency1)
+        # self.currency2_btn.config(text=self.currency2)
 
 
 #runs application
