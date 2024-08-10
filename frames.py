@@ -250,7 +250,7 @@ class PriceTrackerPage(tk.Frame):
         top_coins_label.pack(pady=(0, 10))
 
         #headers for the coin list (TODO edit later)
-        columns=("Rank", "Name", "Price", "24h Change")
+        columns=("Name", "Ticker", "Price", "24h Change", "Market Cap", "Rank")
         coin_list = ttk.Treeview(top_coins_frame, columns=columns, show="headings", height=10)
         for col in columns:
             coin_list.heading(col, text=col)
