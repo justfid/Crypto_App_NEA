@@ -2,4 +2,5 @@
 merge.py
 test.py
 __pycache__/
-API_Key.txt
+coingecko_API_keys.txt
+TODOS.txt

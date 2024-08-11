@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk
-
+from apifunctions import get_price_tracker_data
 
 class LoginDialog(simpledialog.Dialog):
     """defines custom login dialogue"""
@@ -27,7 +27,7 @@ class CryptoTrackerApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Crypto Price Tracker")
-        self.geometry("1280x720")
+        self.geometry("1920x1080")
         self.minsize(800, 450)
         self.configure(bg="#607D8B")
         
@@ -249,12 +249,23 @@ class PriceTrackerPage(tk.Frame):
         top_coins_label = tk.Label(top_coins_frame, text="Top Coins", font=("Arial", 18), bg="#333940", fg="#FFEB3B")
         top_coins_label.pack(pady=(0, 10))
 
-        #headers for the coin list (TODO edit later)
-        columns=("Name", "Ticker", "Price", "24h Change", "Market Cap", "Rank")
+        #headers for the coin list (TODO make them sortable)
+        #TODO make percentages rounded, and make market cap have commas
+        #TODO make width of header smaller, and that it cant be moved, then reduce geometry size back to 1280x720
+        columns=("Name", "Ticker", "Price (USD)", "1h Change (%)", "24h Change (%)", "7d Change (%)", "Market Cap (USD)", "Rank (Market Cap)")
         coin_list = ttk.Treeview(top_coins_frame, columns=columns, show="headings", height=10)
         for col in columns:
             coin_list.heading(col, text=col)
         coin_list.pack(fill=tk.BOTH, expand=True)
+
+        #entries - TODO make a function fetching from database
+        coins = ["bitcoin", "ethereum", "solana", "cardano", "chainlink"]
+        coins.reverse()
+        if len(coins) > 100:
+            coins = coins[:100]
+        data = get_price_tracker_data(coins)
+        for coin in coins:
+            coin_list.insert("",0,values=data[coin])
 
         #configures grid
         self.grid_columnconfigure(1, weight=1)
@@ -265,7 +276,7 @@ class PriceTrackerPage(tk.Frame):
 
     def refresh_data(self):
         self.master.refresh_page()
-        #can remove this message box later - once ik it works
+        #TODO can remove this message box later - once ik it works
         messagebox.showinfo("Refresh", "Refresh Successful")
 
 
@@ -414,14 +425,14 @@ class FiatConverterPage(tk.Frame):
         currency_frame = tk.Frame(white_area, bg="white")
         currency_frame.pack(pady=10)
 
-        self.currency1_btn = tk.Button(currency_frame, text=self.currency1, bg="#4682B4", fg="white", font=("Arial", 12), width=10)
-        self.currency1_btn.grid(row=0, column=0, padx=5)
+        self.currency1_label = tk.Label(currency_frame, text=self.currency1, bg="#4682B4", fg="white", font=("Arial", 12), width=10)
+        self.currency1_label.grid(row=0, column=0, padx=5)
 
         swap_btn = tk.Button(currency_frame, text="Swap", bg="#4682B4", fg="white", font=("Arial", 12), width=10)
         swap_btn.grid(row=0, column=1, padx=5)
 
-        self.currency2_btn = tk.Button(currency_frame, text=self.currency2, bg="#4682B4", fg="white", font=("Arial", 12), width=10)
-        self.currency2_btn.grid(row=0, column=2, padx=5)
+        self.currency2_label = tk.Label(currency_frame, text=self.currency2, bg="#4682B4", fg="white", font=("Arial", 12), width=10)
+        self.currency2_label.grid(row=0, column=2, padx=5)
 
     def go_back(self):
         self.master.go_back()
