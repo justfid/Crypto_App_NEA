@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk
 from apifunctions import get_price_tracker_data, get_exchange_rate
+from mathfunctions import round_to_sf
 
 class LoginDialog(simpledialog.Dialog):
     """defines custom login dialogue"""
@@ -350,8 +351,8 @@ class FiatConverterPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master, bg="#607D8B")
         self.master = master
-        self.currency1 = "USD" #TODO make these changable
-        self.currency2 = "GBP"
+        selected_currency1 = self.currency1 = "GBP" 
+        selected_currency2 = self.currency2 = "USD"
         self.amount = 0
         self.rate = get_exchange_rate(self.currency1, self.currency2)
         self.currencies = ['AUD', 'BGN', 'BRL', 'CAD', 'CHF', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP', 'HKD',
@@ -391,11 +392,11 @@ class FiatConverterPage(tk.Frame):
         self.pair_label.pack(pady=(20, 10))
 
         #white content area with dark grey border
-        white_area = tk.Frame(content_frame, bg="white", highlightbackground="#333940", highlightthickness=5)
-        white_area.pack(expand=True, fill=tk.BOTH, padx=5, pady=5)
+        white_area = tk.Frame(content_frame, bg="white")
+        white_area.pack(expand=True, fill=tk.BOTH, padx=15, pady=15)
 
         #conversion ratio
-        self.ratio_label = tk.Label(white_area, text=f"Ratio 1 : {round(self.rate,3)}", font=("Arial", 12), bg="#4682B4", fg="white", padx=5, pady=2) #self. because needs to be edited
+        self.ratio_label = tk.Label(white_area, text=f"Ratio 1 : {round_to_sf(self.rate,3) if self.rate < 1 else round(self.rate,3)}", font=("Arial", 12), bg="#4682B4", fg="white", padx=5, pady=2) #self. because needs to be edited
         self.ratio_label.pack(pady=(20, 10))
 
         #conversion frame
@@ -411,8 +412,9 @@ class FiatConverterPage(tk.Frame):
         
         self.input_entry = tk.Entry(input_frame, font=("Arial", 12), width=15) #self. because needs to be edited
         self.input_entry.pack(pady=(5, 0))
-        self.input_entry.bind("<Return>", self.on_enter_pressed)
+        self.input_entry.bind("<Return>", self.on_enter_pressed) #makes it so enter key makes the output show
 
+        #code to have default text before click in
         self.placeholder_text = "Enter amount"
         self.input_entry.insert(0, self.placeholder_text)
         self.input_entry.config(fg='grey')
@@ -431,34 +433,42 @@ class FiatConverterPage(tk.Frame):
         
         self.output_entry = tk.Entry(output_frame, font=("Arial", 12), width=15)
         self.add_output_data(f"{0:.2f}")
-
         self.output_entry.pack(pady=(5, 0))
 
         #currency labels and swap button
         currency_frame = tk.Frame(white_area, bg="white")
         currency_frame.pack(pady=10)
 
-        self.currency1_label = tk.Label(currency_frame, text=self.currency1, bg="#4682B4", fg="white", font=("Arial", 12), width=10)
-        self.currency1_label.grid(row=0, column=0, padx=5)
+        self.currency1_var = tk.StringVar(value=self.currency1)
+        self.currency2_var = tk.StringVar(value=self.currency2)
+        self.currency1_dropdown = ttk.Combobox(currency_frame, textvariable=self.currency1_var, 
+                                       values=self.currencies, state="readonly", width=15, font=("Arial", 12))
+        self.currency1_dropdown.grid(row=0, column=0, padx=5)
 
         swap_btn = tk.Button(currency_frame, text="Swap", bg="#4682B4", fg="white", font=("Arial", 12), width=10, command=self.swap)
         swap_btn.grid(row=0, column=1, padx=5)
 
-        self.currency2_label = tk.Label(currency_frame, text=self.currency2, bg="#4682B4", fg="white", font=("Arial", 12), width=10)
-        self.currency2_label.grid(row=0, column=2, padx=5)
+        self.currency2_dropdown = ttk.Combobox(currency_frame, textvariable=self.currency2_var, 
+                                       values=self.currencies, state="readonly", width=15, font=("Arial", 12))
+        self.currency2_dropdown.grid(row=0, column=2, padx=5)
     
+        self.currency1_var.trace_add('write', self.update_currency1)
+        self.currency2_var.trace_add('write', self.update_currency2)
+
     def swap(self):
+        """Swaps the 2 currencies, affects the rate and the output"""
         self.rate = 1/self.rate
-        self.ratio_label.config(text=f"Ratio 1 : {round(self.rate, 3)}")
+        self.ratio_label.config(text=f"Ratio 1 : {round_to_sf(self.rate,3) if self.rate < 1 else round(self.rate,3)}")
         temp_currency = self.currency1
-        self.currency1 = self.currency2
-        self.currency2 = temp_currency
+        self.currency1 = self.currency2_var.get()
+        self.currency2 = self.currency1_var.get()
         self.pair_label.config(text=f"{self.currency1} - {self.currency2}")
-        self.currency1_label.config(text=self.currency1)
-        self.currency2_label.config(text=self.currency2)
+        self.currency1_var.set(self.currency1)
+        self.currency2_var.set(self.currency2)
         self.add_output_data(self.convert_currency())        
 
     def on_enter_pressed(self, event):
+        """Links to the input entry box"""
         value = self.input_entry.get()
         if not value:
             self.amount=0
@@ -469,14 +479,17 @@ class FiatConverterPage(tk.Frame):
                 self.amount = float(value)
                 self.add_output_data(self.convert_currency())
             except ValueError:
+                self.amount = 0
                 self.add_output_data("Error - Try Again")
 
     def on_entry_click(self, event):
+        """Links to the input entry box"""
         if self.input_entry.get() == self.placeholder_text:
             self.input_entry.delete(0, "end")
             self.input_entry.config(fg='black')
     
     def add_output_data(self, result):
+        """Adds data to output entry box"""
         self.output_entry.config(state='normal')
         self.output_entry.delete(0, tk.END)
         self.output_entry.insert(0, result)
@@ -489,18 +502,28 @@ class FiatConverterPage(tk.Frame):
     def go_back(self):
         self.master.go_back()
 
-    def update_currencies(self, currency1, currency2):
-        """Updates the currencies chosen to relfect new ones"""
-        #TODO add functionality
-        # self.currency1 = currency1
-        # self.currency2 = currency2
-        # self.pair_label.config(text=f"{self.currency1} - {self.currency2}")
-        # self.currency1_btn.config(text=self.currency1)
-        # self.currency2_btn.config(text=self.currency2)
+    def update_currency1(self, *args):
+        """Updates currency1 chosen to reflect selected one"""
+        self.currency1 = self.currency1_var.get()
+        self.rate = get_exchange_rate(self.currency1, self.currency2)
+        self.ratio_label.config(text=f"Ratio 1 : {round_to_sf(self.rate,3) if self.rate < 1 else round(self.rate,3)}")
+        self.pair_label.config(text=f"{self.currency1} - {self.currency2}")
+        self.after(10, self.focus_input_entry)
+
+    def update_currency2(self, *args):
+        """Updates currency2 chosen to reflect selected one"""
+        self.currency2 = self.currency2_var.get()
+        self.rate = (get_exchange_rate(self.currency1, self.currency2))
+        self.ratio_label.config(text=f"Ratio 1 : {round_to_sf(self.rate,3) if self.rate < 1 else round(self.rate,3)}")
+        self.pair_label.config(text=f"{self.currency1} - {self.currency2}")
+        self.after(10, self.focus_input_entry)
+
+    def focus_input_entry(self):
+        """Shifts focus to the input entry, and selects whole box"""
+        self.input_entry.focus_set()
+        self.input_entry.select_range(0, tk.END) #may comment this out later, if found to be annoying in testing
 
 
 if __name__ == "__main__":
     app = CryptoTrackerApp()
     app.mainloop()
-
-
