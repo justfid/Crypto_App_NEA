@@ -1,6 +1,6 @@
 import requests
 
-
+#MUTUAL FUNCTIONS
 def read_api_key(file_path):
     """Reads the API key from a file."""
     try:
@@ -18,6 +18,7 @@ def read_api_key(file_path):
         print(f"Error reading API key file: {e}")
         return None
 
+#CG API FUNCTIONS
 
 def get_PT_data(ids, api_key):
     api_key = api_key
@@ -77,6 +78,18 @@ def get_price_tracker_data(coins):
     else:
         pass
 
+#FCA API FUNCTIONS
+
+def get_exchange_rate(original_currency, new_currency):
+    """Get the exchange rate for a currency pair."""
+    api_url = "https://api.freecurrencyapi.com/v1/latest"
+    api_keys = read_api_key("freecurrency_API_keys.txt")
+    for key in api_keys: #validates the key to make sure it works
+        response = requests.get(f"{api_url}?apikey={key}&base_currency={original_currency}&currencies={new_currency}")
+        if response.status_code == 200:
+            return response.json()['data'][new_currency]
+    return "Error, Try again"
+
 
 if __name__ == "__main__":
-    print(get_price_tracker_data(["bitcoin","ethereum"]))
+    pass

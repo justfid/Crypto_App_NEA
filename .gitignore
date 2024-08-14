@@ -4,3 +4,4 @@ test.py
 __pycache__/
 coingecko_API_keys.txt
 TODOS.txt
+freecurrency_API_keys.txt

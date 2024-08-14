@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk
-from apifunctions import get_price_tracker_data
+from apifunctions import get_price_tracker_data, get_exchange_rate
 
 class LoginDialog(simpledialog.Dialog):
     """defines custom login dialogue"""
@@ -350,8 +350,13 @@ class FiatConverterPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master, bg="#607D8B")
         self.master = master
-        self.currency1 = "Currency 1"
-        self.currency2 = "Currency 2"
+        self.currency1 = "USD" #TODO make these changable
+        self.currency2 = "GBP"
+        self.amount = 0
+        self.rate = get_exchange_rate(self.currency1, self.currency2)
+        self.currencies = ['AUD', 'BGN', 'BRL', 'CAD', 'CHF', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP', 'HKD',
+                           'HRK', 'HUF', 'IDR', 'ILS', 'INR', 'ISK', 'JPY', 'KRW', 'MXN', 'MYR', 'NOK', 
+                           'NZD', 'PHP', 'PLN', 'RON', 'RUB', 'SEK', 'SGD', 'THB', 'TRY', 'USD', 'ZAR']
         self.create_widgets()
 
     def create_widgets(self):
@@ -362,7 +367,7 @@ class FiatConverterPage(tk.Frame):
         title_frame = tk.Frame(top_frame, bg="#947E9E")
         title_frame.pack(side=tk.LEFT)
 
-        title_label = tk.Label(title_frame, text="Fiat\nConverter", font=("Arial", 18), bg="#947E9E", fg="white", padx=10, pady=5)
+        title_label = tk.Label(title_frame, text="Fiat Converter", font=("Arial", 18), bg="#947E9E", fg="white", padx=10, pady=5)
         title_label.pack(side=tk.LEFT)
 
         back_btn = tk.Button(top_frame, text="Back", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, command=self.go_back)
@@ -374,7 +379,7 @@ class FiatConverterPage(tk.Frame):
         presets_btn = tk.Button(buttons_frame, text="Presets", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, width=12)
         presets_btn.pack(side=tk.LEFT, padx=5)
 
-        change_pairing_btn = tk.Button(buttons_frame, text="Change\nPairing", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, width=12)
+        change_pairing_btn = tk.Button(buttons_frame, text="Change Pairing", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, width=12)
         change_pairing_btn.pack(side=tk.LEFT, padx=5)
 
         #dark grey frame
@@ -390,8 +395,8 @@ class FiatConverterPage(tk.Frame):
         white_area.pack(expand=True, fill=tk.BOTH, padx=5, pady=5)
 
         #conversion ratio
-        ratio_label = tk.Label(white_area, text="Ratio 1:X", font=("Arial", 12), bg="#4682B4", fg="white", padx=5, pady=2)
-        ratio_label.pack(pady=(20, 10))
+        self.ratio_label = tk.Label(white_area, text=f"Ratio 1 : {round(self.rate,3)}", font=("Arial", 12), bg="#4682B4", fg="white", padx=5, pady=2) #self. because needs to be edited
+        self.ratio_label.pack(pady=(20, 10))
 
         #conversion frame
         conversion_frame = tk.Frame(white_area, bg="white")
@@ -404,21 +409,29 @@ class FiatConverterPage(tk.Frame):
         input_label = tk.Label(input_frame, text="Enter Amount", bg="#4682B4", fg="white", font=("Arial", 12))
         input_label.pack()
         
-        self.input_entry = tk.Entry(input_frame, font=("Arial", 12), width=15)
+        self.input_entry = tk.Entry(input_frame, font=("Arial", 12), width=15) #self. because needs to be edited
         self.input_entry.pack(pady=(5, 0))
+        self.input_entry.bind("<Return>", self.on_enter_pressed)
+
+        self.placeholder_text = "Enter amount"
+        self.input_entry.insert(0, self.placeholder_text)
+        self.input_entry.config(fg='grey')
+        self.input_entry.bind("<FocusIn>", self.on_entry_click)
 
         #equal sign
         equal_label = tk.Label(conversion_frame, text="=", font=("Arial", 16, "bold"), bg="white", fg="black")
         equal_label.grid(row=0, column=1, padx=10)
 
         #output after conversion
-        output_frame = tk.Frame(conversion_frame, bg="#4682B4", padx=10, pady=10)
+        output_frame = tk.Frame(conversion_frame, bg="#4682B4", padx=10, pady=10) #self. because needs to be edited
         output_frame.grid(row=0, column=2, padx=5)
         
         result_label = tk.Label(output_frame, text="Result", bg="#4682B4", fg="white", font=("Arial", 12))
         result_label.pack()
         
-        self.output_entry = tk.Entry(output_frame, font=("Arial", 12), width=15, state="readonly")
+        self.output_entry = tk.Entry(output_frame, font=("Arial", 12), width=15)
+        self.add_output_data(f"{0:.2f}")
+
         self.output_entry.pack(pady=(5, 0))
 
         #currency labels and swap button
@@ -428,11 +441,50 @@ class FiatConverterPage(tk.Frame):
         self.currency1_label = tk.Label(currency_frame, text=self.currency1, bg="#4682B4", fg="white", font=("Arial", 12), width=10)
         self.currency1_label.grid(row=0, column=0, padx=5)
 
-        swap_btn = tk.Button(currency_frame, text="Swap", bg="#4682B4", fg="white", font=("Arial", 12), width=10)
+        swap_btn = tk.Button(currency_frame, text="Swap", bg="#4682B4", fg="white", font=("Arial", 12), width=10, command=self.swap)
         swap_btn.grid(row=0, column=1, padx=5)
 
         self.currency2_label = tk.Label(currency_frame, text=self.currency2, bg="#4682B4", fg="white", font=("Arial", 12), width=10)
         self.currency2_label.grid(row=0, column=2, padx=5)
+    
+    def swap(self):
+        self.rate = 1/self.rate
+        self.ratio_label.config(text=f"Ratio 1 : {round(self.rate, 3)}")
+        temp_currency = self.currency1
+        self.currency1 = self.currency2
+        self.currency2 = temp_currency
+        self.pair_label.config(text=f"{self.currency1} - {self.currency2}")
+        self.currency1_label.config(text=self.currency1)
+        self.currency2_label.config(text=self.currency2)
+        self.add_output_data(self.convert_currency())        
+
+    def on_enter_pressed(self, event):
+        value = self.input_entry.get()
+        if not value:
+            self.amount=0
+            self.add_output_data(self.convert_currency())
+            # self.output_setup()
+        else:
+            try:
+                self.amount = float(value)
+                self.add_output_data(self.convert_currency())
+            except ValueError:
+                self.add_output_data("Error - Try Again")
+
+    def on_entry_click(self, event):
+        if self.input_entry.get() == self.placeholder_text:
+            self.input_entry.delete(0, "end")
+            self.input_entry.config(fg='black')
+    
+    def add_output_data(self, result):
+        self.output_entry.config(state='normal')
+        self.output_entry.delete(0, tk.END)
+        self.output_entry.insert(0, result)
+        self.output_entry.config(state='readonly')
+       
+    def convert_currency(self):
+        result = self.amount * self.rate 
+        return f"{result:.2f}"
 
     def go_back(self):
         self.master.go_back()
