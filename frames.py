@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk
-from apifunctions import get_price_tracker_data, get_exchange_rate
+from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news
 from mathfunctions import round_to_sf
+import webbrowser
 
 class LoginDialog(simpledialog.Dialog):
     """defines custom login dialogue"""
@@ -27,7 +28,7 @@ class CryptoTrackerApp(tk.Tk):
     """main application class"""
     def __init__(self):
         super().__init__()
-        self.title("Crypto Price Tracker")
+        self.title("Crypto Analysis App")
         self.geometry("1920x1080")
         self.minsize(800, 450)
         self.configure(bg="#607D8B")
@@ -151,6 +152,9 @@ class HomePage(tk.Frame):
         self.grid_columnconfigure(1, weight=2, minsize=200)
         self.grid_rowconfigure(1, weight=1)
 
+        self.news_page = 1
+        self.previous_news = None
+
         self.create_widgets()
 
     def create_widgets(self):
@@ -169,7 +173,8 @@ class HomePage(tk.Frame):
             ("Portfolio Manager", self.open_portfolio_overview),
             ("Fiat Converter", self.open_fiat_converter),
             ("Notes", None),
-            ("Log Out", self.log_out)
+            ("Get More News", self.get_more_news),
+            ("Log Out", self.log_out),
         ]
 
         for button_index, (button_text, command) in enumerate(buttons):
@@ -185,10 +190,47 @@ class HomePage(tk.Frame):
         news_label = tk.Label(right_frame, text="News", bg="#333940", fg="#FFEB3B", font=("Arial", 12, "bold"))
         news_label.grid(row=0, column=0, pady=5, sticky="ew")
 
-        news_text = tk.Text(right_frame, bg="#FFFFFF", fg="#333940", font=("Arial", 9), wrap=tk.WORD)
-        news_text.insert("1.0", "[News headlines added here - clickable]")
-        news_text.config(state="disabled")
-        news_text.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+        #ceates treeview with 3 columns
+        self.news_tree = ttk.Treeview(right_frame, columns=("title", "ticker", "date"), show="headings")
+        self.news_tree.heading("title", text="Title")
+        self.news_tree.heading("ticker", text="Ticker")
+        self.news_tree.heading("date", text="Date / Time Published")
+        self.news_tree.column("title", anchor=tk.W, width=200)
+        self.news_tree.column("ticker", anchor=tk.CENTER, width=100)
+        self.news_tree.column("date", anchor=tk.CENTER, width=100)
+        self.news_tree.grid(row=1, column=0, padx=5, pady=5, sticky="nsew")
+
+        #scrollbar
+        scrollbar = ttk.Scrollbar(right_frame, orient="vertical", command=self.news_tree.yview)
+        scrollbar.grid(row=1, column=1, sticky="ns")
+        self.news_tree.configure(yscrollcommand=scrollbar.set)
+
+        #binds double-click event
+        self.news_tree.bind("<Double-1>", self.on_news_click)
+        self.get_more_news()
+
+    def get_more_news(self):
+        news_stories = get_formatted_news(f"&page={self.news_page}")
+        if self.previous_news == news_stories:
+            self.news_tree.insert("", "end", values=("END OF STORIES", "N/A", "N/A"), tags=("END"))
+            self.previous_news = "END"
+            messagebox.showinfo("End of Stories", "All available stories have been shown")
+        elif self.previous_news == "END":
+            messagebox.showinfo("End of Stories", "All available stories have been shown")
+        else:
+            for story in news_stories:
+                title, ticker, date, link = story["title"], story["ticker"], story["published_at"], story["url"]
+                self.news_tree.insert("", "end", values=(title, ticker, date), tags=(link))
+            self.previous_news = news_stories
+            self.news_page += 1
+
+    def on_news_click(self, event):
+        item = self.news_tree.selection()[0]
+        link = self.news_tree.item(item, "tags")[0]
+        if link == "END":
+            pass
+        else: 
+            webbrowser.open_new(link)
 
     def open_price_tracker(self):
         self.master.show_price_tracker_page()
@@ -521,8 +563,8 @@ class FiatConverterPage(tk.Frame):
     def focus_input_entry(self):
         """Shifts focus to the input entry, and selects whole box"""
         self.input_entry.focus_set()
-        self.input_entry.select_range(0, tk.END) #may comment this out later, if found to be annoying in testing
-
+        #self.input_entry.select_range(0, tk.END) #may comment this out later, if found to be annoying in testing
+        
 
 if __name__ == "__main__":
     app = CryptoTrackerApp()

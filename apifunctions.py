@@ -90,6 +90,42 @@ def get_exchange_rate(original_currency, new_currency):
             return response.json()['data'][new_currency]
     return "Error, Try again"
 
+#NEWS API FUNCTIONS
+
+def get_news(filters = None):
+    api_url = "https://cryptopanic.com/api/v1/posts/"
+    api_keys = read_api_key("cryptopanic_API_keys.txt")
+    
+    for key in api_keys: #validates the key to make sure it works
+        response = requests.get(f"{api_url}?auth_token={key}{filters if filters else ''}")
+        if response.status_code == 200:
+            return response.json()["results"]
+    return "Error, Try again"
+
+
+def get_formatted_news(filters=None):
+    data = get_news(filters)
+
+    #processes and returns data
+    processed_data = []
+    for item in data:
+        processed_item = {
+            'title': item['title'],
+            'url': item['url'],
+            'ticker': extract_ticker(item),
+            'published_at': item['published_at'].rstrip("Z").replace("T", " / ")
+        }
+        processed_data.append(processed_item)
+    return processed_data
+
+
+def extract_ticker(item):
+    if 'currencies' in item and item['currencies']:
+        return item['currencies'][0]['code']
+    return None
+
 
 if __name__ == "__main__":
     pass
+
+    
