@@ -127,5 +127,3 @@ def extract_ticker(item):
 
 if __name__ == "__main__":
     pass
-
-    

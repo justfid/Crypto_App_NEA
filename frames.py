@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import font as tkfont
-from tkinter import simpledialog, messagebox, ttk
+from tkinter import simpledialog, messagebox, ttk, Listbox
 from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news
 from mathfunctions import round_to_sf
 import webbrowser
@@ -72,6 +72,12 @@ class CryptoTrackerApp(tk.Tk):
         fiat_converter_page.grid(row=0, column=0, sticky="nsew")
         self.__pages_stack.append(fiat_converter_page)
         fiat_converter_page.tkraise()
+
+    def show_notes_page(self):
+        notes_page = NotesPage(self)
+        notes_page.grid(row=0, column=0, sticky="nsew")
+        self.__pages_stack.append(notes_page)
+        notes_page.tkraise()
 
     def go_back(self):
         """removes froms stack, and goes back to previous page - Can exit the whole app if used from the login page"""
@@ -172,7 +178,7 @@ class HomePage(tk.Frame):
             ("Price Tracker", self.open_price_tracker),
             ("Portfolio Manager", self.open_portfolio_overview),
             ("Fiat Converter", self.open_fiat_converter),
-            ("Notes", None),
+            ("Notes", self.open_notes),
             ("Get More News", self.get_more_news),
             ("Log Out", self.log_out),
         ]
@@ -240,6 +246,9 @@ class HomePage(tk.Frame):
 
     def open_fiat_converter(self):
         self.master.show_fiat_converter_page()
+
+    def open_notes(self):
+        self.master.show_notes_page()
 
     def log_out(self):
         self.master.go_back()
@@ -566,6 +575,146 @@ class FiatConverterPage(tk.Frame):
         #self.input_entry.select_range(0, tk.END) #may comment this out later, if found to be annoying in testing
         
 
+class NotesPage(tk.Frame):
+    def __init__(self, master):
+        super().__init__(master, bg="#607D8B")
+        self.master = master
+        self.create_widgets()
+
+    def create_widgets(self):
+        
+        title_frame = tk.Frame(self, bg="#947E9E")
+        title_frame.grid(row=0, column=0, sticky="w", padx=10, pady=10)
+
+        title_label = tk.Label(title_frame, text="Notes", font=("Arial", 24), bg="#947E9E", fg="white", padx=10, pady=5)
+        title_label.pack(side=tk.LEFT)
+
+        back_btn = tk.Button(self, text="Back", bg="#333940", fg="#FFEB3B",
+                             font=("Arial", 10), padx=8, pady=4, width=8, command=self.go_back)
+        back_btn.grid(row=0, column=1, padx=(0, 10), pady=10, sticky="w")
+
+        #creating other buttons
+        buttons_frame = tk.Frame(self, bg="#607D8B")
+        buttons_frame.grid(row=0, column=1, sticky="ne", padx=10, pady=10)
+
+        other_buttons = [
+            ("New Note", self.new_note),
+            ("More Details", self.get_more_details),
+            ("Save", self.save_note),
+            ("Delete", self.delete_note),
+        ]
+
+        for index, (text, command) in enumerate(other_buttons):
+            btn = tk.Button(buttons_frame, text=text, bg="#333940", fg="#FFEB3B", 
+                            font=("Arial", 13), padx=11, pady=6, width=9, command=command)
+            btn.grid(row=0, column=index, padx=2, pady=5)
+
+        #notes section
+        notes_frame = tk.Frame(self, bg="#333940", padx=10, pady=10)
+        notes_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
+
+        #notes list on left
+        notes_list_frame = tk.Frame(notes_frame, bg="#333940")
+        notes_list_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        notes_label = tk.Label(notes_list_frame, text="Notes", font=("Arial", 14), bg="#333940", fg="#FFEB3B", pady=5)
+        notes_label.pack(side=tk.TOP, anchor="w")
+
+        self.notes_list = tk.Listbox(notes_list_frame, bg="white", fg="black", font=("Arial", 12), width=40)
+        self.notes_list.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self.notes_list.bind('<<ListboxSelect>>', self.on_select)
+        self.notes_list.bind("<Double-1>", self.edit_title)
+
+        #scrollbar for notes list
+        notes_scrollbar = tk.Scrollbar(notes_list_frame, orient="vertical", command=self.notes_list.yview)
+        notes_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.notes_list.config(yscrollcommand=notes_scrollbar.set)
+
+        #text box for notes
+        note_content_frame = tk.Frame(notes_frame, bg="#333940")
+        note_content_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
+
+        edit_label = tk.Label(note_content_frame, text="Selected Note:", font=("Arial", 14), bg="#333940", fg="#FFEB3B", pady=5)
+        edit_label.pack(side=tk.TOP, anchor="w")
+
+        self.note_content = tk.Text(note_content_frame, wrap=tk.WORD, bg="white", fg="black", font=("Arial", 12))
+        self.note_content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        #scrollbar for notes
+        content_scrollbar = tk.Scrollbar(note_content_frame, orient="vertical", command=self.note_content.yview)
+        content_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        self.note_content.config(yscrollcommand=content_scrollbar.set)
+
+        self.grid_columnconfigure(1, weight=1)
+        self.grid_rowconfigure(2, weight=1)
+
+        self.load_notes()
+
+    def go_back(self):
+        self.master.go_back()
+
+    def new_note(self):
+        #turns the box off read only, and starts new note
+        self.edit_title() #adds a title
+        messagebox.askokcancel("hello", "hello")
+        ...
+        #WHOLE FUNCTION CLUNKY. NOT NEEDED UNLESS A N0TE IS ALREADY BEING SHOWN, POTENTIALLY ADD DEFAULT TEXT TO MAKE THAT BUTTON HAVE A USE?
+
+    def delete_note(self):
+        #deletes note from database"
+        if messagebox.askokcancel("Delete Note","Are you sure you want to proceed?\nThis action cannot be undone."""):
+            #delete note from database
+            ...
+        else:
+            pass
+
+
+    def edit_title(self):
+        #triggers when title double clicked, and allows the user to change the title
+        #TODO add a messagebox where u can type
+        ...
+
+    def save_note(self):
+        #saves the note, and title to database
+        if messagebox.askokcancel("Save Note", "Are you sure you want to proceed?\nThis action cannot be undone."""):
+            #if no title saved
+            #   get user to add title
+            #saves / updates note to database
+            ...
+        else:
+            pass
+        ...
+
+    def on_select(self, event):
+        #when selected, the note itself should be pulled from the database
+        ...
+    
+    def load_notes(self):
+        #pull just the titles from database and insert into listbox
+        # TODO make editable/ make this working
+        note_titles = ["hey", "hello", "bye"]
+        self.note_content.insert(tk.END, *note_titles)
+        # for index, title in enumerate(note_titles):
+        #     self.note_content.insert(int(index)+1, title)
+        #make read only
+
+    def get_more_details(self):
+        #show other details about note eg date modified
+        ...
+
+
+class Note():
+    #TODO make this work with notes page
+    def __init__(self, title, content, date_created, date_modified, index):
+        self.title = title
+        self.content = content
+        self.date_created = date_created
+        self.date_modified = date_modified
+        self.index = index #index here counts from 1, not 0 so make sure no errors there
+        #add other relevant details
+
+
 if __name__ == "__main__":
     app = CryptoTrackerApp()
     app.mainloop()
+    

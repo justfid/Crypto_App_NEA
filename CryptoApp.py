@@ -1,5 +1,4 @@
 #import libraries needed
-import requests
 import sqlite3
 import matplotlib
 from frames import CryptoTrackerApp
@@ -9,5 +8,3 @@ from frames import CryptoTrackerApp
 if __name__ == "__main__":
     app = CryptoTrackerApp()
     app.mainloop()
-
-
