@@ -402,8 +402,8 @@ class FiatConverterPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master, bg="#607D8B")
         self.master = master
-        selected_currency1 = self.currency1 = "GBP" 
-        selected_currency2 = self.currency2 = "USD"
+        self.currency1 = "GBP" 
+        self.currency2 = "USD"
         self.amount = 0
         self.rate = get_exchange_rate(self.currency1, self.currency2)
         self.currencies = ['AUD', 'BGN', 'BRL', 'CAD', 'CHF', 'CNY', 'CZK', 'DKK', 'EUR', 'GBP', 'HKD',
@@ -510,7 +510,6 @@ class FiatConverterPage(tk.Frame):
         """Swaps the 2 currencies, affects the rate and the output"""
         self.rate = 1/self.rate
         self.ratio_label.config(text=f"Ratio 1 : {round_to_sf(self.rate,3) if self.rate < 1 else round(self.rate,3)}")
-        temp_currency = self.currency1
         self.currency1 = self.currency2_var.get()
         self.currency2 = self.currency1_var.get()
         self.pair_label.config(text=f"{self.currency1} - {self.currency2}")
