@@ -1,67 +1,67 @@
 CREATE TABLE IF NOT EXISTS User (
-	username VARCHAR NOT NULL,
+	username VARCHAR NOT NULL UNIQUE,
 	hashedPassword VARCHAR NOT NULL,
-	portfolioId INT NOT NULL,
-	topcoinsListId INT NOT NULL,
+	portfolioId INT,
+	topcoinsListId INT,
 PRIMARY KEY(username),
 FOREIGN KEY(portfolioId) REFERENCES PortfolioData(id),
-FOREIGN KEY(topcoinsListId) REFERENCES TopcoinsList(listId)
+FOREIGN KEY(topcoinsListId) REFERENCES TopcoinsList(listId),
 );
 
 CREATE TABLE IF NOT EXISTS PortfolioData (
 	portfolioId INT NOT NULL UNIQUE AUTO_INCREMENT,
-	username VARCHAR NOT NULL,
-	value REAL NOT NULL,
+	username VARCHAR NOT NULL UNIQUE,
+	totalValue FLOAT,
 PRIMARY KEY(portfolioId),
-FOREIGN KEY(username) REFERENCES User(username)
+FOREIGN KEY(username) REFERENCES User(username),
 );
 
 CREATE TABLE IF NOT EXISTS Coin (
 	coinTicker VARCHAR NOT NULL UNIQUE,
-	coinName VARCHAR NOT NULL
+	coinName VARCHAR NOT NULL,
 PRIMARY KEY(coinTicker),
 );
 
-CREATE TABLE IF NOT EXISTS topcoinListCoin (
+CREATE TABLE IF NOT EXISTS TopcoinListCoin (
 	listId INT NOT NULL,
 	coinTicker VARCHAR NOT NULL,
 PRIMARY KEY(listId, coinTicker),
 FOREIGN KEY(listId) REFERENCES TopcoinsList(listId),
-FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker)
+FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker),
 );
 
 CREATE TABLE IF NOT EXISTS Transactions (
 	transactionId INT NOT NULL UNIQUE AUTO_INCREMENT,
 	portfolioId INT NOT NULL,
-	coinTicker INT primary key NOT NULL UNIQUE,
-	date REAL NOT NULL,
-	value REAL NOT NULL,
+	coinTicker VARCHAR NOT NULL,
+	date DATE,
+	value FLOAT,
 PRIMARY KEY(transactionId),
 FOREIGN KEY(portfolioId) REFERENCES PortfolioData(portfolioId),
-FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker)
+FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker),
 );
 
 CREATE TABLE IF NOT EXISTS TopcoinsList (
-	listId INT primary key NOT NULL,
-	username VARCHAR NOT NULL,
+	listId INT NOT NULL AUTO_INCREMENT,
+	username VARCHAR,
 PRIMARY KEY(listId),
-FOREIGN KEY(username) REFERENCES User(username)
+FOREIGN KEY(username) REFERENCES User(username),
 );
 
 CREATE TABLE IF NOT EXISTS NotesData (
-	noteId INT NOT NULL UNIQUE,
+	noteId INT NOT NULL UNIQUE AUTO_INCREMENT,
 	title VARCHAR NOT NULL,
-	content VARCHAR NOT NULL,
+	content TEXT, 
 	username VARCHAR NOT NULL,
 PRIMARY KEY(noteId),
-FOREIGN KEY(username) REFERENCES User(username)
+FOREIGN KEY(username) REFERENCES User(username),
 );
 
 CREATE TABLE IF NOT EXISTS PortfolioCoin (
 	portfolioId INT NOT NULL,
 	coinTicker VARCHAR NOT NULL,
-	value INT NOT NULL,
+	value FLOAT,
 PRIMARY KEY(portfolioId, coinTicker),
 FOREIGN KEY(portfolioId) REFERENCES PortfolioData(portfolioId),
-FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker)
+FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker),
 );
