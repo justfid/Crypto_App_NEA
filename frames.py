@@ -271,10 +271,10 @@ class PriceTrackerPage(tk.Frame):
 
         #in each tuple: button_name, command
         other_buttons = [
-            ("Compare", None),
-            ("Wishlist", None),
-            ("See More", None),
-            ("Add Coin", None)
+            ("Add Coin", None),
+            ("Remove Coin", None),
+            ("Compare Coins", None),
+            ("Sort By", None)
         ]
         for index, (text, command) in enumerate(other_buttons):
             btn = tk.Button(buttons_frame, text=text, bg="#333940", fg="#FFEB3B", 
@@ -349,7 +349,6 @@ class PortfolioOverviewPage(tk.Frame):
         #in each tuple: button_name, command
         other_buttons = [
             ("Graphs", None),
-            ("Badges", None),
             ("Filters", None),
             ("Sort By", None)
         ]
@@ -423,16 +422,7 @@ class FiatConverterPage(tk.Frame):
         title_label.pack(side=tk.LEFT)
 
         back_btn = tk.Button(top_frame, text="Back", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, command=self.go_back)
-        back_btn.pack(side=tk.LEFT, padx=5)
-
-        buttons_frame = tk.Frame(top_frame, bg="#607D8B")
-        buttons_frame.pack(side=tk.RIGHT)
-
-        presets_btn = tk.Button(buttons_frame, text="Presets", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, width=12)
-        presets_btn.pack(side=tk.LEFT, padx=5)
-
-        change_pairing_btn = tk.Button(buttons_frame, text="Change Pairing", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, width=12)
-        change_pairing_btn.pack(side=tk.LEFT, padx=5)
+        back_btn.pack(side=tk.RIGHT, padx=5)
 
         #dark grey frame
         content_frame = tk.Frame(self, bg="#333940")
@@ -598,7 +588,6 @@ class NotesPage(tk.Frame):
 
         other_buttons = [
             ("New Note", self.new_note),
-            ("More Details", self.get_more_details),
             ("Save", self.save_note),
             ("Delete", self.delete_note),
         ]

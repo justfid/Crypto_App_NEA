@@ -1,89 +1,67 @@
-CREATE TABLE IF NOT EXISTS `User` (
-	`userId` integer primary key NOT NULL UNIQUE,
-	`username` TEXT NOT NULL,
-	`password` TEXT NOT NULL,
-	`wishlistId` INTEGER NOT NULL,
-	`portfolioId` INTEGER NOT NULL,
-	`fiatPresetsId` INTEGER NOT NULL,
-	`notesId` INTEGER NOT NULL,
-	`topCoinsId` INTEGER NOT NULL,
-FOREIGN KEY(`wishlistId`) REFERENCES `Wishlist`(`id`),
-FOREIGN KEY(`portfolioId`) REFERENCES `PortfolioData`(`id`),
-FOREIGN KEY(`fiatPresetsId`) REFERENCES `FiatPresets`(`id`),
-FOREIGN KEY(`notesId`) REFERENCES `NotesData`(`id`),
-FOREIGN KEY(`topCoinsId`) REFERENCES `TopCoins`(`id`)
+CREATE TABLE IF NOT EXISTS User (
+	username VARCHAR NOT NULL,
+	hashedPassword VARCHAR NOT NULL,
+	portfolioId INT NOT NULL,
+	topcoinsListId INT NOT NULL,
+PRIMARY KEY(username),
+FOREIGN KEY(portfolioId) REFERENCES PortfolioData(id),
+FOREIGN KEY(topcoinsListId) REFERENCES TopcoinsList(listId)
 );
-CREATE TABLE IF NOT EXISTS `PortfolioData` (
-	`id` integer primary key NOT NULL UNIQUE,
-	`userId` INTEGER NOT NULL,
-FOREIGN KEY(`userId`) REFERENCES `User`(`userId`)
-);
-CREATE TABLE IF NOT EXISTS `Coin` (
-	`id` integer primary key NOT NULL UNIQUE,
-	`coinName` TEXT NOT NULL,
-	`ticker` TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS `FiatPresets` (
-	`id` integer primary key NOT NULL UNIQUE,
-	`presetName` TEXT NOT NULL,
-	`coin1Id` INTEGER NOT NULL,
-	`coin2Id` INTEGER NOT NULL,
-FOREIGN KEY(`coin1Id`) REFERENCES `Coin`(`id`),
-FOREIGN KEY(`coin2Id`) REFERENCES `Coin`(`id`)
-);
-CREATE TABLE IF NOT EXISTS `Wishlist` (
-	`id` integer primary key NOT NULL UNIQUE,
-	`date` REAL NOT NULL
-);
-CREATE TABLE IF NOT EXISTS `TopCoins` (
-	`id` integer primary key NOT NULL UNIQUE,
-	`coinId` INTEGER NOT NULL,
-FOREIGN KEY(`coinId`) REFERENCES `Coin`(`id`)
-);
-CREATE TABLE IF NOT EXISTS `Badges` (
-	`id` integer primary key NOT NULL UNIQUE,
-	`name` TEXT NOT NULL,
-	`description` TEXT NOT NULL
-);
-CREATE TABLE IF NOT EXISTS `Transactions` (
-	`portfolioId` integer primary key NOT NULL UNIQUE,
-	`coinId` INTEGER NOT NULL,
-	`date` REAL NOT NULL,
-	`value` INTEGER NOT NULL,
-FOREIGN KEY(`portfolioId`) REFERENCES `PortfolioData`(`id`),
-FOREIGN KEY(`coinId`) REFERENCES `Coin`(`id`)
-);
-CREATE TABLE IF NOT EXISTS `portfolioBadges` (
-	`portfolioid` INTEGER NOT NULL,
-	`badgeId` INTEGER NOT NULL,
-FOREIGN KEY(`portfolioid`) REFERENCES `PortfolioData`(`id`),
-FOREIGN KEY(`badgeId`) REFERENCES `Badges`(`id`)
-);
-CREATE TABLE IF NOT EXISTS `WishlistCoin` (
-	`wishlistId` INTEGER NOT NULL,
-	`coinId` INTEGER NOT NULL,
-FOREIGN KEY(`wishlistId`) REFERENCES `Wishlist`(`id`),
-FOREIGN KEY(`coinId`) REFERENCES `Coin`(`id`)
-);
-CREATE TABLE IF NOT EXISTS `NotesData` (
-	`id` integer primary key NOT NULL UNIQUE,
-	`content` TEXT NOT NULL
-);
-FOREIGN KEY(`wishlistId`) REFERENCES `Wishlist`(`id`)
-FOREIGN KEY(`portfolioId`) REFERENCES `PortfolioData`(`id`)
-FOREIGN KEY(`fiatPresetsId`) REFERENCES `FiatPresets`(`id`)
-FOREIGN KEY(`notesId`) REFERENCES `NotesData`(`id`)
-FOREIGN KEY(`topCoinsId`) REFERENCES `TopCoins`(`id`)
-FOREIGN KEY(`userId`) REFERENCES `User`(`userId`)
 
-FOREIGN KEY(`coin1Id`) REFERENCES `Coin`(`id`)
-FOREIGN KEY(`coin2Id`) REFERENCES `Coin`(`id`)
+CREATE TABLE IF NOT EXISTS PortfolioData (
+	portfolioId INT NOT NULL UNIQUE AUTO_INCREMENT,
+	username VARCHAR NOT NULL,
+	value REAL NOT NULL,
+PRIMARY KEY(portfolioId),
+FOREIGN KEY(username) REFERENCES User(username)
+);
 
-FOREIGN KEY(`coinId`) REFERENCES `Coin`(`id`)
+CREATE TABLE IF NOT EXISTS Coin (
+	coinTicker VARCHAR NOT NULL UNIQUE,
+	coinName VARCHAR NOT NULL
+PRIMARY KEY(coinTicker),
+);
 
-FOREIGN KEY(`portfolioId`) REFERENCES `PortfolioData`(`id`)
-FOREIGN KEY(`coinId`) REFERENCES `Coin`(`id`)
-FOREIGN KEY(`portfolioid`) REFERENCES `PortfolioData`(`id`)
-FOREIGN KEY(`badgeId`) REFERENCES `Badges`(`id`)
-FOREIGN KEY(`wishlistId`) REFERENCES `Wishlist`(`id`)
-FOREIGN KEY(`coinId`) REFERENCES `Coin`(`id`)
+CREATE TABLE IF NOT EXISTS topcoinListCoin (
+	listId INT NOT NULL,
+	coinTicker VARCHAR NOT NULL,
+PRIMARY KEY(listId, coinTicker),
+FOREIGN KEY(listId) REFERENCES TopcoinsList(listId),
+FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker)
+);
+
+CREATE TABLE IF NOT EXISTS Transactions (
+	transactionId INT NOT NULL UNIQUE AUTO_INCREMENT,
+	portfolioId INT NOT NULL,
+	coinTicker INT primary key NOT NULL UNIQUE,
+	date REAL NOT NULL,
+	value REAL NOT NULL,
+PRIMARY KEY(transactionId),
+FOREIGN KEY(portfolioId) REFERENCES PortfolioData(portfolioId),
+FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker)
+);
+
+CREATE TABLE IF NOT EXISTS TopcoinsList (
+	listId INT primary key NOT NULL,
+	username VARCHAR NOT NULL,
+PRIMARY KEY(listId),
+FOREIGN KEY(username) REFERENCES User(username)
+);
+
+CREATE TABLE IF NOT EXISTS NotesData (
+	noteId INT NOT NULL UNIQUE,
+	title VARCHAR NOT NULL,
+	content VARCHAR NOT NULL,
+	username VARCHAR NOT NULL,
+PRIMARY KEY(noteId),
+FOREIGN KEY(username) REFERENCES User(username)
+);
+
+CREATE TABLE IF NOT EXISTS PortfolioCoin (
+	portfolioId INT NOT NULL,
+	coinTicker VARCHAR NOT NULL,
+	value INT NOT NULL,
+PRIMARY KEY(portfolioId, coinTicker),
+FOREIGN KEY(portfolioId) REFERENCES PortfolioData(portfolioId),
+FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker)
+);
