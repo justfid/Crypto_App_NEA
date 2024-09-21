@@ -4,6 +4,7 @@ adjust width of treeviews
 format percentages in price tracker
 make default function for when the x is pressed to terminate program rather than exit, and make sure everything is saved
 make note wider, and listbox narrower
-sort, and search algorithms, and recursive algorithms
+sort, and search algorithms
 change wishlist to remove coin on PT
 fix errors if API doesnt work (if entire for loop doesnt return any)
+MAKE IT SO SQL functions have consistent returns for errors etc

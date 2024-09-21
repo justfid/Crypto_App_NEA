@@ -3,7 +3,7 @@ from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk, Listbox
 from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news
 from mathfunctions import round_to_sf
-from sqlcode import add_new_user, check_username_exists
+from sqlcode import add_new_user, check_username_exists, add_coin_to_list
 from utils import verify_password, get_top_coins
 import webbrowser
 
@@ -292,7 +292,7 @@ class PriceTrackerPage(tk.Frame):
 
         #in each tuple: button_name, command
         other_buttons = [
-            ("Add Coin", None),
+            ("Add Coin", self.add_coin),
             ("Remove Coin", None),
             ("Compare Coins", None),
             ("Sort By", None)
@@ -342,6 +342,19 @@ class PriceTrackerPage(tk.Frame):
         #configures grid
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
+
+    def add_coin(self):
+        coin = simpledialog.askstring("Add Coin", "Enter the name of the coin:")
+        
+        if coin:
+            coin = coin.strip()
+            success = add_coin_to_list(logged_in_user, coin)
+                
+            if success:
+                messagebox.showinfo("Success", f"{coin} has been added to your list.")
+                self.refresh_data()  # Refresh the display to show the new coin
+            else:
+                messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist n our database.")
 
     def go_back(self):
         self.master.go_back()
