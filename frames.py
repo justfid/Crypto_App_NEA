@@ -3,6 +3,8 @@ from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk, Listbox
 from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news
 from mathfunctions import round_to_sf
+from sqlcode import add_new_user, check_username_exists
+from utils import verify_password
 import webbrowser
 
 class LoginDialog(simpledialog.Dialog):
@@ -131,20 +133,34 @@ class LoginPage(tk.Frame):
         exit_button.grid(row=4, column=0, pady=10)
 
     def login(self):
-        """once button is pressed, this method is called. Logs user in"""
+        """called once button is pressed. Logs user in"""
         dialog = LoginDialog(self, title="Login")
         if dialog.result:
             username, password = dialog.result
-            #console output
-            #print(f"Login attempted with username: {username} and password: {'*' * len(password)}")
-            #TODO implement login verification
-            self.master.show_home_page()
-
+            if not username or not password:
+                messagebox.showerror("Error", "Either Username or Password is Blank. Try again")
+            else:  
+                if check_username_exists(username) and verify_password(password, username):
+                    self.master.show_home_page()
+                else:
+                    messagebox.showerror("Error", "Incorrect Username or Password")
+            
     def signup(self):
-        """allows user to make account. Called when button pressed"""
-        #TODO add ability to make new accounts
-        messagebox.showinfo("Signup", "Signup functionality not implemented yet.")
-
+        """creates account"""
+        dialog = LoginDialog(self, title="Signup")
+        if dialog.result:
+            username, password = dialog.result
+            #if one blank
+            if not username or not password:
+                messagebox.showerror("Error", "Either Username or Password is Blank. Try again")
+            #TODO make sure passwords are secure enough, eg minimum length etc
+            else:
+                success = add_new_user(username, password)
+                if success:
+                    messagebox.showinfo("Success", "New Account Created")
+                else:
+                    messagebox.showerror("Error", "Username Already Exists. Try Again")
+        
     def exit_app(self):
         self.master.go_back()
 
