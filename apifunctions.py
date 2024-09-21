@@ -1,4 +1,5 @@
 import requests
+from utils import get_top_coins
 
 #MUTUAL FUNCTIONS
 def read_api_key(file_path):
@@ -21,7 +22,6 @@ def read_api_key(file_path):
 #CG API FUNCTIONS
 
 def get_PT_data(ids, api_key):
-    api_key = api_key
     """Gathers the data for the price tracker overview"""
     #sets up parameters and headers"
     url = "https://api.coingecko.com/api/v3/coins/markets"
@@ -77,6 +77,43 @@ def get_price_tracker_data(coins):
             return(result)
     else:
         pass
+
+
+def get_coin_ticker(coin_name, api_key):
+    """Retrieves the ticker (symbol) for a given coin name using CoinGecko API"""
+    url = "https://api.coingecko.com/api/v3/search"
+    params = {
+        "query": coin_name,
+        "x_cg_demo_api_key": api_key
+    }
+    headers = {
+        "Accepts": "application/json",
+        "X-CG-Demo-API-Key": api_key
+    }
+
+    try:
+        response = requests.get(url, params=params, headers=headers)
+        response.raise_for_status()
+        data = response.json()
+
+        if data['coins']:
+            return data['coins'][0]['symbol']
+        else:
+            return None
+
+    except requests.RequestException:
+        return None
+    
+
+def get_coin_ticker_with_key(coin_name):
+    """Attempts to get coin ticker using multiple API keys"""
+    api_keys = read_api_key("coingecko_API_keys.txt")
+    for key in api_keys:
+        result = get_coin_ticker(coin_name, key)
+        if result:
+            return result
+    return None
+
 
 #FCA API FUNCTIONS
 

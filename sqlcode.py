@@ -1,5 +1,6 @@
 import sqlite3
 from mathfunctions import hash_password
+from apifunctions import get_coin_ticker_with_key
 
 db_path = "CryptoApp.db"
 
@@ -10,17 +11,14 @@ def add_new_user(username, password):
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     
+    query = "INSERT INTO User (username, hashedPassword) VALUES (?, ?)"
     try:
-        cursor.execute("INSERT INTO User (username, hashedPassword) VALUES (?, ?)",
-                       (username, hashed_password))
+        cursor.execute(query, (username, hashed_password))
         connection.commit()
-        print(f"User '{username}' added successfully.")
         return True
     except sqlite3.IntegrityError:
-        print(f"Error: Username '{username}' already exists.")
         return False
     except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
         return False
     finally:
         connection.close()
@@ -31,39 +29,45 @@ def check_username_exists(username):
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     
-    try:
-        cursor.execute("SELECT username FROM User WHERE username = ?;", (username,))
-        result = cursor.fetchone()
-        if result:
-            return True
-        else:
-            return False
-    except sqlite3.Error as e:
-        print(f"Database error: {e}") #TODO see if this is needed
+    query = "SELECT username FROM User WHERE username = ?;"
+    cursor.execute(query, (username,))
+    result = cursor.fetchone()
+    connection.close()
+    if result:
+        return True
+    else:
         return False
-    finally:
-        connection.close()
+    
 
-
-def get_hashed_password(username):
-    """returns the hashes password of a user"""
+def add_coin_to_list(username, coinName):
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     
-    try:
-        cursor.execute("SELECT hashedPassword FROM User WHERE username = ?;", (username,))
+    coinTicker = get_coin_ticker_with_key(coinName)
+    if coinTicker:
+
+        db_query = "SELECT coinName from Coin WHERE coinName = ?;"
+        cursor.execute(db_query, (coinName,))
         result = cursor.fetchone()
-        if result:
-            return result[0]  # Return the hashed password
-        else:
-            return None  # User not found TODO will raise error in mathfunction if none - see if theres any case this is none
-    except sqlite3.Error as e:
-        print(f"Database error: {e}") #TODO see if this is needed
-        return None
-    finally:
+        if not result:
+            add_coin_to_database(coinTicker, coinName)
+    
+        query = "INSERT INTO TopcoinList (listOwner, coinTicker) VALUES (?,?);"
+        cursor.execute(query, (username, coinTicker,))
+        connection.commit()
         connection.close()
+    else:
+        connection.close()
+        return "COIN DOESNT EXIST" #TODO add a messagebox to convey that
 
 
-# Example usage
-if __name__ == "__main__":
-    print(get_hashed_password("test"))
+def add_coin_to_database(coinTicker, coinName):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    query = "INSERT INTO Coin (coinTicker, coinName) VALUES (?,?);"
+    cursor.execute(query, (coinTicker, coinName,))
+    connection.commit()
+    connection.close()
+
+add_coin_to_list("t","chainlink")

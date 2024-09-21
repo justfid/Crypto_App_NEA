@@ -1,5 +1,8 @@
 import hashlib
-from sqlcode import get_hashed_password
+import sqlite3
+
+db_path = "CryptoApp.db"
+
 
 def verify_password(provided_password, username):
     """verifies to see if stored (hashed) password is the same as the hashed new password for the user given"""
@@ -15,5 +18,43 @@ def verify_password(provided_password, username):
     #compares new hash with stored hash: == in python is a timing-safe comparison
     return new_hash == stored_hash
 
-if __name__ == "__main__":
-    verify_password("test","test")
+def get_hashed_password(username):
+    """returns the hashes password of a user"""
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    
+    query = "SELECT hashedPassword FROM User WHERE username = ?;"
+    try:
+        cursor.execute(query, (username,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]  # Return the hashed password
+        else:
+            return None  # User not found TODO will raise error in mathfunction if none - see if theres any case this is none
+    except sqlite3.Error as e:
+        print(f"Database error: {e}") #TODO see if this is needed
+        return None
+    finally:
+        connection.close()
+
+    
+def get_top_coins(username):
+    """returns the list of top coins"""
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+
+    query = "SELECT coinName FROM Coin INNER JOIN TopcoinList ON Coin.coinTicker = TopcoinList.coinTicker WHERE listOwner= ?;"
+    try:
+        cursor.execute(query, (username,))
+        result = cursor.fetchall()
+        formatted_result = [item[0] for item in result]
+        if result:
+            return formatted_result
+        else:
+            return None  # TODO need error handling
+    except sqlite3.Error as e:
+        print(f"Database error: {e}") #TODO see if this is needed
+        return None
+    finally:
+        connection.close()
+

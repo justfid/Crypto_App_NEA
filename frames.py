@@ -4,7 +4,7 @@ from tkinter import simpledialog, messagebox, ttk, Listbox
 from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news
 from mathfunctions import round_to_sf
 from sqlcode import add_new_user, check_username_exists
-from utils import verify_password
+from utils import verify_password, get_top_coins
 import webbrowser
 
 class LoginDialog(simpledialog.Dialog):
@@ -141,6 +141,8 @@ class LoginPage(tk.Frame):
                 messagebox.showerror("Error", "Either Username or Password is Blank. Try again")
             else:  
                 if check_username_exists(username) and verify_password(password, username):
+                    global logged_in_user 
+                    logged_in_user = username
                     self.master.show_home_page()
                 else:
                     messagebox.showerror("Error", "Incorrect Username or Password")
@@ -180,6 +182,7 @@ class HomePage(tk.Frame):
         self.create_widgets()
 
     def create_widgets(self):
+        print(logged_in_user)
         title_font = tkfont.Font(family="Arial", size=16, weight="bold")
         title = tk.Label(self, text="Home Page", font=title_font, bg="#947E9E", fg="#FFFFFF", padx=10, pady=5)
         title.grid(row=0, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
@@ -268,6 +271,8 @@ class HomePage(tk.Frame):
 
     def log_out(self):
         self.master.go_back()
+        global logged_in_user
+        logged_in_user = None
         messagebox.showinfo("Log Out", "Log Out Successful")
 
 
@@ -326,8 +331,7 @@ class PriceTrackerPage(tk.Frame):
             coin_list.heading(col, text=col)
         coin_list.pack(fill=tk.BOTH, expand=True)
 
-        #entries - TODO make a function fetching from database
-        coins = ["bitcoin", "ethereum", "solana", "cardano", "chainlink"]
+        coins = get_top_coins(logged_in_user)
         coins.reverse()
         if len(coins) > 100:
             coins = coins[:100]
