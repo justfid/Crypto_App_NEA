@@ -78,5 +78,29 @@ def add_coin_to_database(coinTicker, coinName):
     connection.commit()
     connection.close()
 
+
+def remove_coin_from_list(username, coinTicker):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    coinTicker = coinTicker.upper()
+    if coinTicker:
+        #removes coin from user's list
+        query = "DELETE FROM TopcoinList WHERE listOwner = ? AND coinTicker = ?;"
+        try:
+            cursor.execute(query, (username, coinTicker,))
+            if cursor.rowcount > 0:
+                connection.commit()
+                return True
+            else:
+                return False  #coin was not in user's list
+        except sqlite3.Error as e:
+            print(f"An error occurred: {e}")
+            return False
+        finally:
+            connection.close()
+    else:
+        connection.close()
+        return False  #invalid coin name
+
 if __name__ == "__main__":
-    add_coin_to_list("t","chainlink")
+    pass

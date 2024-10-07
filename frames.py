@@ -3,7 +3,7 @@ from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk, Listbox
 from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news
 from mathfunctions import round_to_sf
-from sqlcode import add_new_user, check_username_exists, add_coin_to_list
+from sqlcode import add_new_user, check_username_exists, add_coin_to_list, remove_coin_from_list
 from utils import verify_password, get_top_coins
 import webbrowser
 
@@ -182,7 +182,6 @@ class HomePage(tk.Frame):
         self.create_widgets()
 
     def create_widgets(self):
-        print(logged_in_user)
         title_font = tkfont.Font(family="Arial", size=16, weight="bold")
         title = tk.Label(self, text="Home Page", font=title_font, bg="#947E9E", fg="#FFFFFF", padx=10, pady=5)
         title.grid(row=0, column=0, columnspan=2, sticky="ew", padx=5, pady=5)
@@ -293,7 +292,7 @@ class PriceTrackerPage(tk.Frame):
         #in each tuple: button_name, command
         other_buttons = [
             ("Add Coin", self.add_coin),
-            ("Remove Coin", None),
+            ("Remove Coin", self.remove_coin),
             ("Compare Coins", None),
             ("Sort By", None)
         ]
@@ -326,10 +325,10 @@ class PriceTrackerPage(tk.Frame):
         #TODO make percentages rounded, and make market cap have commas
         #TODO make width of header smaller, and that it cant be moved, then reduce geometry size back to 1280x720
         columns=("Name", "Ticker", "Price (USD)", "1h Change (%)", "24h Change (%)", "7d Change (%)", "Market Cap (USD)", "Rank (Market Cap)")
-        coin_list = ttk.Treeview(top_coins_frame, columns=columns, show="headings", height=10)
+        self.coin_list = ttk.Treeview(top_coins_frame, columns=columns, show="headings", height=10)
         for col in columns:
-            coin_list.heading(col, text=col)
-        coin_list.pack(fill=tk.BOTH, expand=True)
+            self.coin_list.heading(col, text=col)
+        self.coin_list.pack(fill=tk.BOTH, expand=True)
 
         coins = get_top_coins(logged_in_user)
         coins.reverse()
@@ -337,16 +336,17 @@ class PriceTrackerPage(tk.Frame):
             coins = coins[:100]
         data = get_price_tracker_data(coins)
         for coin in coins:
-            coin_list.insert("",0,values=data[coin])
+            self.coin_list.insert("",0,values=data[coin])
 
         #configures grid
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
 
     def add_coin(self):
-        coin = simpledialog.askstring("Add Coin", "Enter the name of the coin:")
-        
-        if coin:
+        coin = simpledialog.askstring("Add Coin", "Enter the name of the coin:").lower()
+        if coin == "xrp":
+            messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist in our database.")
+        elif coin:
             coin = coin.strip()
             success = add_coin_to_list(logged_in_user, coin)
                 
@@ -354,16 +354,36 @@ class PriceTrackerPage(tk.Frame):
                 messagebox.showinfo("Success", f"{coin} has been added to your list.")
                 self.refresh_data()  # Refresh the display to show the new coin
             else:
-                messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist n our database.")
+                messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist in our database.")
+    
+    def remove_coin(self):
+        selected_items = self.coin_list.selection()
+        if not selected_items:
+            messagebox.showwarning("No Selection", "Please select a coin to remove.")
+            return None
+
+        item = selected_items[0]
+        coin_data = self.coin_list.item(item, "values")
+        coin_ticker = coin_data[1]  #gets ticker
+        if coin_ticker =="xrp":
+            coin_ticker = "rlusd"
+        confirm = messagebox.askyesno("Confirm Removal", f"Are you sure you want to remove {coin_ticker}?")
+        if confirm:
+            success = remove_coin_from_list(logged_in_user, coin_ticker)
+            if coin_ticker =="rlusd":
+                coin_ticker = "xrp"
+            if success:
+                self.refresh_data()
+                messagebox.showinfo("Success", f"{coin_ticker} has been removed from your list.")
+            else:
+                messagebox.showerror("Error", f"Failed to remove {coin_ticker} from your list.")
 
     def go_back(self):
         self.master.go_back()
 
     def refresh_data(self):
         self.master.refresh_page()
-        #TODO can remove this message box later - once ik it works
-        messagebox.showinfo("Refresh", "Refresh Successful")
-
+    
 
 class PortfolioOverviewPage(tk.Frame):
     def __init__(self, master):

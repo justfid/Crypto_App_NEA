@@ -1,5 +1,4 @@
 import requests
-from utils import get_top_coins
 
 #MUTUAL FUNCTIONS
 def read_api_key(file_path):
@@ -77,6 +76,7 @@ def get_price_tracker_data(coins):
             return(result)
     else:
         pass
+    return None
 
 
 def get_coin_ticker(coin_name, api_key):
