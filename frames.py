@@ -293,7 +293,6 @@ class PriceTrackerPage(tk.Frame):
         other_buttons = [
             ("Add Coin", self.add_coin),
             ("Remove Coin", self.remove_coin),
-            ("Compare Coins", None),
             ("Sort By", None)
         ]
         for index, (text, command) in enumerate(other_buttons):
@@ -401,6 +400,8 @@ class PortfolioOverviewPage(tk.Frame):
 
         #in each tuple: button_name, command
         other_buttons = [
+            ("Add Transaction", self.add_transaction),
+            ("Show Total", None),
             ("Graphs", None),
             ("Filters", None),
             ("Sort By", None)
@@ -441,13 +442,35 @@ class PortfolioOverviewPage(tk.Frame):
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
 
+    def add_transaction(self):
+        ticker = simpledialog.askstring("Add Coin", "Enter the name of the coin:").lower()
+        condition = False
+        value = "x"
+        while not condition:
+            try:
+                float(value)
+            except ValueError:
+                value = simpledialog.askstring("Value", "What is the value of the transaction")
+        value = float(value).round(2)
+        print(value)
+        # if coin == "xrp":
+        #     #error checking - xrp is bugged
+        #     messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist in our database.")
+        # elif coin:
+        #     coin = coin.strip()
+        #     success = add_transaction_db(logged_in_user, coin)
+                
+        #     if success:
+        #         messagebox.showinfo("Success", f"{coin} has been added to your list.")
+        #         self.refresh_data()  # Refresh the display to show the new coin
+        #     else:
+        #         messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist in our database.")
+    
     def go_back(self):
         self.master.go_back()
 
     def refresh_data(self):
         self.master.refresh_page()
-        #can remove this message box later - once ik it works
-        messagebox.showinfo("Refresh", "Refresh Successful")
 
 
 class FiatConverterPage(tk.Frame):
