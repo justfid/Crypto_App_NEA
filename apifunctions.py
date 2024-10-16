@@ -66,7 +66,6 @@ def get_PT_data(ids, api_key):
 
 
 def get_price_tracker_data(coins):
-    #TODO add it so it reads the coins from the database
     api_keys = read_api_key("coingecko_API_keys.txt")
     for key in api_keys:
         #checks to see if api key valid
@@ -74,9 +73,7 @@ def get_price_tracker_data(coins):
         if result:
             #returns the result if valid
             return(result)
-    else:
-        pass
-    return None
+    return {coin: {} for coin in coins}
 
 
 def get_coin_ticker(coin_name, api_key):
@@ -113,6 +110,53 @@ def get_coin_ticker_with_key(coin_name):
         if result:
             return result
     return None
+
+
+def get_coin_name(coin_ticker):
+    """Retrieves the coin name for a given ticker using CoinGecko API"""
+    api_keys = read_api_key("coingecko_API_keys.txt")
+    for key in api_keys:
+        url = "https://api.coingecko.com/api/v3/coins/list"
+        params = {
+            "include_platform": "false",
+            "x_cg_demo_api_key": key
+        }
+        headers = {
+            "Accepts": "application/json",
+            "X-CG-Demo-API-Key": key
+        }
+
+        try:
+            response = requests.get(url, params=params, headers=headers)
+            response.raise_for_status()
+            coins = response.json()
+
+            for coin in coins:
+                if coin['symbol'].upper() == coin_ticker.upper():
+                    return coin['name']
+
+            return None  # Coin not found
+
+        except requests.RequestException:
+            continue  # Try the next API key
+
+    return None  # All API keys failed
+
+def get_coin_id_from_ticker(ticker):
+    url = "https://api.coingecko.com/api/v3/coins/list"
+    try:
+        response = requests.get(url)
+        response.raise_for_status()
+        coins = response.json()
+        
+        for coin in coins:
+            if coin['symbol'].lower() == ticker.lower():
+                return coin['id']
+        
+        return None  # If no matching ticker is found
+    except requests.RequestException as e:
+        print(f"Error fetching coin list: {e}")
+        return None
 
 
 #FCA API FUNCTIONS

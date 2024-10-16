@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk, Listbox
-from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news
+from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news, get_coin_ticker_with_key
 from mathfunctions import round_to_sf
-from sqlcode import add_new_user, check_username_exists, add_coin_to_list, remove_coin_from_list
+from sqlcode import add_new_user, check_username_exists, add_coin_to_list, remove_coin_from_list, add_transaction_to_db, add_coin_to_database, fetch_transactions
 from utils import verify_password, get_top_coins
 import webbrowser
 
@@ -401,7 +401,6 @@ class PortfolioOverviewPage(tk.Frame):
         #in each tuple: button_name, command
         other_buttons = [
             ("Add Transaction", self.add_transaction),
-            ("Show Total", None),
             ("Graphs", None),
             ("Filters", None),
             ("Sort By", None)
@@ -432,39 +431,95 @@ class PortfolioOverviewPage(tk.Frame):
         portfolio_label.pack(pady=(0, 10))
 
         #headers for the coin list (TODO edit later)
-        columns=("Rank", "Name", "Price", "24h Change")
-        portfolio_list = ttk.Treeview(portfolio_frame, columns=columns, show="headings", height=10)
+        columns=("Coin", "Quantity", "Value Now", "Price Bought", "Gain/Loss", "% Gain/Loss")
+        self.portfolio_list = ttk.Treeview(portfolio_frame, columns=columns, show="headings", height=10)
         for col in columns:
-            portfolio_list.heading(col, text=col)
-        portfolio_list.pack(fill=tk.BOTH, expand=True)
+            self.portfolio_list.heading(col, text=col)
+        self.portfolio_list.pack(fill=tk.BOTH, expand=True)
+
+        self.load_portfolio_data()
 
         #configures grid
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
 
+    def load_portfolio_data(self):
+        transactions = fetch_transactions(logged_in_user)
+        print(transactions)
+        current_prices = get_price_tracker_data([coin for coin in transactions])
+
+        for coin, data in transactions.items():
+            quantity = data['quantity']
+            price_bought = data['total_value']
+            
+            current_price = current_prices.get(coin, {}).get('current_price', 0)
+            if current_price == 0:
+                print(f"Warning: No price data available for {coin}")
+
+            value_now = quantity * current_price
+            gain_loss = value_now - price_bought
+            percent_gain_loss = (gain_loss / price_bought) * 100 if price_bought != 0 else 0
+
+            self.portfolio_list.insert("", "end", values=(
+                coin,
+                f"{quantity:.8f}",
+                f"${value_now:.2f}",
+                f"${price_bought:.2f}",
+                f"${gain_loss:.2f}",
+                f"{percent_gain_loss:.2f}%"
+            ))
+
     def add_transaction(self):
-        ticker = simpledialog.askstring("Add Coin", "Enter the name of the coin:").lower()
-        condition = False
-        value = "x"
-        while not condition:
-            try:
-                float(value)
-            except ValueError:
-                value = simpledialog.askstring("Value", "What is the value of the transaction")
-        value = float(value).round(2)
-        print(value)
-        # if coin == "xrp":
-        #     #error checking - xrp is bugged
-        #     messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist in our database.")
-        # elif coin:
-        #     coin = coin.strip()
-        #     success = add_transaction_db(logged_in_user, coin)
-                
-        #     if success:
-        #         messagebox.showinfo("Success", f"{coin} has been added to your list.")
-        #         self.refresh_data()  # Refresh the display to show the new coin
-        #     else:
-        #         messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist in our database.")
+        coin_id = simpledialog.askstring("Add Coin", "Enter the name of the coin:").lower()
+        if not coin_id:
+            messagebox.showerror("Error", "Coin cannot be empty.")
+            return
+        
+        #gets transaction value
+        value = simpledialog.askfloat("Add Transaction", "Enter the transaction value:")
+        if value is None:
+            messagebox.showerror("Error", "Invalid transaction value.")
+            return
+        value = round(float(value),2)
+
+        try:
+            coin_ticker = get_coin_ticker_with_key(coin_id)
+            if not coin_ticker:
+                messagebox.showerror("Error", f"{coin_id} is not a valid coin")
+                return
+        except Exception as e:
+            messagebox.showerror("Unexpected Error", f"An unexpected error occurred while fetching coin data.\n\nError: {str(e)}")
+            return
+    
+        #TODO add to coin table if not exist in db already
+
+        current_prices = get_price_tracker_data([coin_id]) 
+        current_price = current_prices.get(coin_id, {}).get('current_price') #TODO make this work, gives list not dict. AttributeError: 'list' object has no attribute 'get'
+    
+        if current_price is None or current_price == 0:
+            messagebox.showerror("Error", f"Unable to fetch current price for {coin_ticker} (ID: {coin_id}).")
+            return
+        
+    
+        quantity = value / current_price
+
+        confirm_msg = f"You are about to add a transaction:\n\n" \
+                    f"Coin: {coin_id}\n" \
+                    f"Value: ${value:.2f}\n" \
+                    f"Current Price: ${current_price:.2f}\n" \
+                    f"Quantity: {quantity:.8f}\n\n" \
+                    f"Do you want to proceed?"
+        
+        if not messagebox.askyesno("Confirm Transaction", confirm_msg):
+            return
+
+        success = add_transaction_to_db(logged_in_user, coin_ticker, value, quantity)
+        if success:
+            messagebox.showinfo("Success", f"Transaction added successfully. Value: ${value:.2f}, Quantity: {quantity:.8f}")
+            self.refresh_data()
+        else:
+            messagebox.showerror("Error", "Failed to add transaction to the database.")
+        
     
     def go_back(self):
         self.master.go_back()

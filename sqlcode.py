@@ -102,5 +102,62 @@ def remove_coin_from_list(username, coinTicker):
         connection.close()
         return False  #invalid coin name
 
+
+def add_transaction_to_db(username, coin_ticker, value, quantity):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    
+    query = "INSERT INTO Transactions (portfolioOwner, coinTicker, value, quantity) VALUES (?, ?, ?, ?);"
+    try:
+        cursor.execute(query, (username, coin_ticker, value, quantity))
+        connection.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return False
+    finally:
+        connection.close()
+
+def check_ticker_exists(ticker):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+        
+    query = "SELECT coinTicker FROM Coin WHERE coinTicker = ?;"
+    cursor.execute(query, (ticker,))
+    result = cursor.fetchone()
+        
+    connection.close()
+    return result is not None
+
 if __name__ == "__main__":
     pass
+
+def fetch_transactions(username):
+        connection = sqlite3.connect(db_path)
+        cursor = connection.cursor()
+        
+        query = """
+        SELECT coinTicker, SUM(value) as total_value, 
+               SUM(CASE WHEN value > 0 THEN value ELSE 0 END) / 
+               SUM(CASE WHEN value > 0 THEN value / value ELSE 0 END) as quantity
+        FROM Transactions
+        WHERE portfolioOwner = ?
+        GROUP BY coinTicker
+        """
+        
+        try:
+            cursor.execute(query, (username,))
+            results = cursor.fetchall()
+            
+            transactions = {}
+            for row in results:
+                coin, total_value, quantity = row
+                transactions[coin] = {'total_value': total_value, 'quantity': quantity}
+            
+            return transactions
+        
+        except sqlite3.Error as e:
+            print(f"Database error: {e}")
+            return {}
+        finally:
+            connection.close()

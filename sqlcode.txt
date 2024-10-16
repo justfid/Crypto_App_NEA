@@ -24,7 +24,6 @@ CREATE TABLE IF NOT EXISTS Transactions (
 	portfolioOwner VARCHAR NOT NULL,
 	coinTicker VARCHAR NOT NULL,
 	value FLOAT,
-	date DATETIME,
 FOREIGN KEY(portfolioOwner) REFERENCES User(username),
 FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker)
 );
