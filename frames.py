@@ -1,11 +1,12 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk, Listbox
-from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news, get_coin_ticker_with_key
+from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news, get_coin_ticker_with_key, get_coin_id_from_ticker
 from mathfunctions import round_to_sf
 from sqlcode import add_new_user, check_username_exists, add_coin_to_list, remove_coin_from_list, add_transaction_to_db, add_coin_to_database, fetch_transactions
 from utils import verify_password, get_top_coins
 import webbrowser
+import time
 
 class LoginDialog(simpledialog.Dialog):
     """defines custom login dialogue"""
@@ -351,7 +352,7 @@ class PriceTrackerPage(tk.Frame):
                 
             if success:
                 messagebox.showinfo("Success", f"{coin} has been added to your list.")
-                self.refresh_data()  # Refresh the display to show the new coin
+                self.refresh_data()
             else:
                 messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist in our database.")
     
@@ -444,22 +445,26 @@ class PortfolioOverviewPage(tk.Frame):
         self.grid_rowconfigure(2, weight=1)
 
     def load_portfolio_data(self):
+        #TODO FIX SO THAT QUANTITY IS QUANTITY AND NOT PRICE
         transactions = fetch_transactions(logged_in_user)
         print(transactions)
-        current_prices = get_price_tracker_data([coin for coin in transactions])
-
+        current_prices = get_price_tracker_data([get_coin_id_from_ticker(coin) for coin in transactions])
+        
         for coin, data in transactions.items():
             quantity = data['quantity']
             price_bought = data['total_value']
             
-            current_price = current_prices.get(coin, {}).get('current_price', 0)
+            coin_id = get_coin_id_from_ticker(coin)
+            coin_data = current_prices.get(coin_id, [])
+            current_price = coin_data[2] if len(coin_data) >= 3 else 0
+            
             if current_price == 0:
                 print(f"Warning: No price data available for {coin}")
-
+            
             value_now = quantity * current_price
             gain_loss = value_now - price_bought
             percent_gain_loss = (gain_loss / price_bought) * 100 if price_bought != 0 else 0
-
+            
             self.portfolio_list.insert("", "end", values=(
                 coin,
                 f"{quantity:.8f}",
@@ -475,6 +480,7 @@ class PortfolioOverviewPage(tk.Frame):
             messagebox.showerror("Error", "Coin cannot be empty.")
             return
         
+        time.sleep(0.5)
         #gets transaction value
         value = simpledialog.askfloat("Add Transaction", "Enter the transaction value:")
         if value is None:
@@ -494,15 +500,13 @@ class PortfolioOverviewPage(tk.Frame):
         #TODO add to coin table if not exist in db already
 
         current_prices = get_price_tracker_data([coin_id]) 
-        current_price = current_prices.get(coin_id, {}).get('current_price') #TODO make this work, gives list not dict. AttributeError: 'list' object has no attribute 'get'
+        current_price = current_prices.get(coin_id, [None, None, None])[2]
     
         if current_price is None or current_price == 0:
             messagebox.showerror("Error", f"Unable to fetch current price for {coin_ticker} (ID: {coin_id}).")
             return
         
-    
         quantity = value / current_price
-
         confirm_msg = f"You are about to add a transaction:\n\n" \
                     f"Coin: {coin_id}\n" \
                     f"Value: ${value:.2f}\n" \
