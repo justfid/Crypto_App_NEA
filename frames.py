@@ -156,14 +156,18 @@ class LoginPage(tk.Frame):
             #if one blank
             if not username or not password:
                 messagebox.showerror("Error", "Either Username or Password is Blank. Try again")
-            #TODO make sure passwords are secure enough, eg minimum length etc
             else:
                 success = add_new_user(username, password)
                 if success:
+                    self.add_default_coins(username)
                     messagebox.showinfo("Success", "New Account Created")
                 else:
                     messagebox.showerror("Error", "Username Already Exists. Try Again")
-        
+    
+    def add_default_coins(self, username):
+        for name in ["bitcoin","ethereum"]:
+            add_coin_to_list(username, name)
+
     def exit_app(self):
         self.master.go_back()
 
@@ -432,7 +436,7 @@ class PortfolioOverviewPage(tk.Frame):
         portfolio_label.pack(pady=(0, 10))
 
         #headers for the coin list (TODO edit later)
-        columns=("Coin", "Quantity", "Value Now", "Price Bought", "Gain/Loss", "% Gain/Loss")
+        columns=("Coin", "Price", "Quantity", "Value Now", "Value When Bought", "Gain/Loss", "% Gain/Loss")
         self.portfolio_list = ttk.Treeview(portfolio_frame, columns=columns, show="headings", height=10)
         for col in columns:
             self.portfolio_list.heading(col, text=col)
@@ -467,6 +471,7 @@ class PortfolioOverviewPage(tk.Frame):
             
             self.portfolio_list.insert("", "end", values=(
                 coin,
+                f"${current_price:.2f}",
                 f"{quantity:.8f}",
                 f"${value_now:.2f}",
                 f"${price_bought:.2f}",

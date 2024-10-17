@@ -133,31 +133,34 @@ if __name__ == "__main__":
     pass
 
 def fetch_transactions(username):
-        connection = sqlite3.connect(db_path)
-        cursor = connection.cursor()
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    
+    query = """
+    SELECT coinTicker,
+           SUM(value) as total_value,
+           SUM(quantity) as total_quantity
+    FROM Transactions
+    WHERE portfolioOwner = ?
+    GROUP BY coinTicker
+    """
+    
+    try:
+        cursor.execute(query, (username,))
+        results = cursor.fetchall()
         
-        query = """
-        SELECT coinTicker, SUM(value) as total_value, 
-               SUM(CASE WHEN value > 0 THEN value ELSE 0 END) / 
-               SUM(CASE WHEN value > 0 THEN value / value ELSE 0 END) as quantity
-        FROM Transactions
-        WHERE portfolioOwner = ?
-        GROUP BY coinTicker
-        """
+        transactions = {}
+        for row in results:
+            coin, total_value, total_quantity = row
+            transactions[coin] = {
+                'total_value': total_value,
+                'quantity': total_quantity
+            }
         
-        try:
-            cursor.execute(query, (username,))
-            results = cursor.fetchall()
-            
-            transactions = {}
-            for row in results:
-                coin, total_value, quantity = row
-                transactions[coin] = {'total_value': total_value, 'quantity': quantity}
-            
-            return transactions
-        
-        except sqlite3.Error as e:
-            print(f"Database error: {e}")
-            return {}
-        finally:
-            connection.close()
+        return transactions
+    
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return {}
+    finally:
+        connection.close()
