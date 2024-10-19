@@ -18,5 +18,39 @@ def hash_password(password):
     password_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, iterations, key_length) #password.encode() converts string to bytes
     return salt.hex() + password_hash.hex() #combines salt and hash, converting both to hexadecimal strings
 
+
+def merge_sort(arr, key_function=None):
+    if len(arr) <= 1:
+        return arr
+
+    mid = len(arr) // 2
+    left = merge_sort(arr[:mid], key_function)
+    right = merge_sort(arr[mid:], key_function)
+
+    return merge(left, right, key_function)
+
+def merge(left, right, key_function):
+    result = []
+    i = j = 0
+
+    while i < len(left) and j < len(right):
+        left_value = key_function(left[i]) if key_function else left[i]
+        right_value = key_function(right[j]) if key_function else right[j]
+        
+        if left_value <= right_value:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+
+
+
+
 if __name__ == "__main__":
     ...

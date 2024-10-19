@@ -1,12 +1,16 @@
 import tkinter as tk
 from tkinter import font as tkfont
-from tkinter import simpledialog, messagebox, ttk, Listbox
+from tkinter import simpledialog, messagebox, ttk
 from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news, get_coin_ticker_with_key, get_coin_id_from_ticker
-from mathfunctions import round_to_sf
+from mathfunctions import round_to_sf, merge, merge_sort
 from sqlcode import add_new_user, check_username_exists, add_coin_to_list, remove_coin_from_list, add_transaction_to_db, add_coin_to_database, fetch_transactions
+from sqlcode import save_note_to_db, delete_note_from_db, get_note_from_db, get_all_note_titles, update_note_title_in_db
 from utils import verify_password, get_top_coins
 import webbrowser
 import time
+from matplotlib.figure import Figure
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
+import matplotlib.pyplot as plt
 
 class LoginDialog(simpledialog.Dialog):
     """defines custom login dialogue"""
@@ -298,7 +302,7 @@ class PriceTrackerPage(tk.Frame):
         other_buttons = [
             ("Add Coin", self.add_coin),
             ("Remove Coin", self.remove_coin),
-            ("Sort By", None)
+            ("Sort By", self.sort)
         ]
         for index, (text, command) in enumerate(other_buttons):
             btn = tk.Button(buttons_frame, text=text, bg="#333940", fg="#FFEB3B", 
@@ -365,10 +369,15 @@ class PriceTrackerPage(tk.Frame):
         if not selected_items:
             messagebox.showwarning("No Selection", "Please select a coin to remove.")
             return None
-
+        
+        total_coins = len(self.coin_list.get_children())
+        if total_coins == 1:
+            messagebox.showerror("Error", "Cannot remove the last coin. Your list must contain at least one coin.")
+            return None
+    
         item = selected_items[0]
         coin_data = self.coin_list.item(item, "values")
-        coin_ticker = coin_data[1]  #gets ticker
+        coin_ticker = coin_data[1]
         if coin_ticker =="xrp":
             coin_ticker = "rlusd"
         confirm = messagebox.askyesno("Confirm Removal", f"Are you sure you want to remove {coin_ticker}?")
@@ -382,6 +391,68 @@ class PriceTrackerPage(tk.Frame):
             else:
                 messagebox.showerror("Error", f"Failed to remove {coin_ticker} from your list.")
 
+    def sort(self):
+        # Create a custom dialog for sorting options
+        sort_dialog = tk.Toplevel(self)
+        sort_dialog.title("Sort Options")
+        sort_dialog.geometry("300x150")
+        sort_dialog.resizable(False, False)
+
+        # Create and pack widgets
+        tk.Label(sort_dialog, text="Sort by:").pack(pady=5)
+        
+        columns = ["Name", "Ticker", "Price (USD)", "1h Change (%)", "24h Change (%)", 
+                   "7d Change (%)", "Market Cap (USD)", "Rank (Market Cap)"]
+        sort_column = tk.StringVar(value=columns[0])
+        column_dropdown = ttk.Combobox(sort_dialog, textvariable=sort_column, values=columns, state="readonly")
+        column_dropdown.pack(pady=5)
+
+        sort_order = tk.StringVar(value="Ascending")
+        tk.Radiobutton(sort_dialog, text="Ascending", variable=sort_order, value="Ascending").pack()
+        tk.Radiobutton(sort_dialog, text="Descending", variable=sort_order, value="Descending").pack()
+
+        def apply_sort():
+            column = sort_column.get()
+            order = sort_order.get()
+            reverse = order == "Descending"
+            
+            # Get all items in the treeview
+            data = [(self.coin_list.set(child, column), child) for child in self.coin_list.get_children('')]
+
+            # Define key function for sorting
+            def key_function(item):
+                return self.convert_value(item[0], column)
+
+            # Sort the data using merge sort
+            sorted_data = merge_sort(data, key_function)
+
+            # Reverse if descending order
+            if reverse:
+                sorted_data.reverse()
+
+            # Rearrange items in sorted positions
+            for index, (_, child) in enumerate(sorted_data):
+                self.coin_list.move(child, '', index)
+
+            sort_dialog.destroy()
+
+        tk.Button(sort_dialog, text="Apply", command=apply_sort).pack(pady=10)
+
+        # Wait for the dialog to be closed
+        self.wait_window(sort_dialog)
+
+    def convert_value(self, value, column):
+        if column in ["Price (USD)", "1h Change (%)", "24h Change (%)", "7d Change (%)"]:
+            return float(value.strip('%$').replace(',', ''))
+        elif column == "Market Cap (USD)":
+            return int(value.strip('$').replace(',', ''))
+        elif column == "Rank (Market Cap)":
+            return int(value)
+        else:
+            return value.lower()
+
+
+        
     def go_back(self):
         self.master.go_back()
 
@@ -406,9 +477,9 @@ class PortfolioOverviewPage(tk.Frame):
         #in each tuple: button_name, command
         other_buttons = [
             ("Add Transaction", self.add_transaction),
-            ("Graphs", None),
+            ("Graphs", self.get_chart),
             ("Filters", None),
-            ("Sort By", None)
+            ("Sort By", self.sort)
         ]
         for index, (text, command) in enumerate(other_buttons):
             btn = tk.Button(buttons_frame, text=text, bg="#333940", fg="#FFEB3B", 
@@ -435,7 +506,6 @@ class PortfolioOverviewPage(tk.Frame):
         portfolio_label = tk.Label(portfolio_frame, text="Portfolio", font=("Arial", 18), bg="#333940", fg="#FFEB3B")
         portfolio_label.pack(pady=(0, 10))
 
-        #headers for the coin list (TODO edit later)
         columns=("Coin", "Price", "Quantity", "Value Now", "Value When Bought", "Gain/Loss", "% Gain/Loss")
         self.portfolio_list = ttk.Treeview(portfolio_frame, columns=columns, show="headings", height=10)
         for col in columns:
@@ -449,16 +519,31 @@ class PortfolioOverviewPage(tk.Frame):
         self.grid_rowconfigure(2, weight=1)
 
     def load_portfolio_data(self):
-        #TODO FIX SO THAT QUANTITY IS QUANTITY AND NOT PRICE
         transactions = fetch_transactions(logged_in_user)
-        print(transactions)
-        current_prices = get_price_tracker_data([get_coin_id_from_ticker(coin) for coin in transactions])
+        
+        #filters  None values and collects valid coin IDs
+        valid_coin_ids = []
+        for coin in transactions.keys():
+            coin_id = get_coin_id_from_ticker(coin)
+            if coin_id is not None:
+                valid_coin_ids.append(coin_id)
+            else:
+                print(f"Warning: Could not get coin ID for ticker {coin}")
+
+        if not valid_coin_ids:
+            messagebox.showwarning("No Data", "No valid coin data available to display.")
+            return
+
+        current_prices = get_price_tracker_data(valid_coin_ids)
         
         for coin, data in transactions.items():
             quantity = data['quantity']
             price_bought = data['total_value']
             
             coin_id = get_coin_id_from_ticker(coin)
+            if coin_id is None:
+                continue 
+
             coin_data = current_prices.get(coin_id, [])
             current_price = coin_data[2] if len(coin_data) >= 3 else 0
             
@@ -486,7 +571,6 @@ class PortfolioOverviewPage(tk.Frame):
             return
         
         time.sleep(0.5)
-        #gets transaction value
         value = simpledialog.askfloat("Add Transaction", "Enter the transaction value:")
         if value is None:
             messagebox.showerror("Error", "Invalid transaction value.")
@@ -528,14 +612,72 @@ class PortfolioOverviewPage(tk.Frame):
             self.refresh_data()
         else:
             messagebox.showerror("Error", "Failed to add transaction to the database.")
-        
     
+    def sort(self):
+        sort_dialog = tk.Toplevel(self)
+        sort_dialog.title("Sort Options")
+        sort_dialog.geometry("300x150")
+        sort_dialog.resizable(False, False)
+
+        tk.Label(sort_dialog, text="Sort by:").pack(pady=5)
+        
+        columns = ["Coin", "Price", "Quantity", "Value Now", "Value When Bought", "Gain/Loss", "% Gain/Loss"]
+        sort_column = tk.StringVar(value=columns[0])
+        column_dropdown = ttk.Combobox(sort_dialog, textvariable=sort_column, values=columns, state="readonly")
+        column_dropdown.pack(pady=5)
+
+        sort_order = tk.StringVar(value="Ascending")
+        tk.Radiobutton(sort_dialog, text="Ascending", variable=sort_order, value="Ascending").pack()
+        tk.Radiobutton(sort_dialog, text="Descending", variable=sort_order, value="Descending").pack()
+
+        def apply_sort():
+            column = sort_column.get()
+            order = sort_order.get()
+            reverse = order == "Descending"
+            
+            #gets all items in treeview
+            data = [(self.portfolio_list.set(child, column), child) for child in self.portfolio_list.get_children('')]
+
+            #defines key function for sorting
+            def key_function(item):
+                return self.convert_value(item[0], column)
+
+            #sorts data using merge sort
+            sorted_data = merge_sort(data, key_function)
+
+            #reverses if descending order
+            if reverse:
+                sorted_data.reverse()
+
+            #rearranges items in sorted positions
+            for index, (_, child) in enumerate(sorted_data):
+                self.portfolio_list.move(child, '', index)
+
+            sort_dialog.destroy()
+
+        tk.Button(sort_dialog, text="Apply", command=apply_sort).pack(pady=10)
+
+        # Wait for the dialog to be closed
+        self.wait_window(sort_dialog)
+
+    def convert_value(self, value, column):
+        if column in ["Price", "Value Now", "Value When Bought", "Gain/Loss"]:
+            return float(value.strip('$').replace(',', ''))
+        elif column in ["Quantity", "% Gain/Loss"]:
+            return float(value.strip('%'))
+        else:
+            return value.lower()
+
+
+    def get_chart(self):
+        ...
+
     def go_back(self):
         self.master.go_back()
 
     def refresh_data(self):
         self.master.refresh_page()
-
+    
 
 class FiatConverterPage(tk.Frame):
     def __init__(self, master):
@@ -782,65 +924,91 @@ class NotesPage(tk.Frame):
         self.master.go_back()
 
     def new_note(self):
-        #turns the box off read only, and starts new note
-        self.edit_title() #adds a title
-        messagebox.askokcancel("hello", "hello")
-        ...
-        #WHOLE FUNCTION CLUNKY. NOT NEEDED UNLESS A N0TE IS ALREADY BEING SHOWN, POTENTIALLY ADD DEFAULT TEXT TO MAKE THAT BUTTON HAVE A USE?
-
-    def delete_note(self):
-        #deletes note from database"
-        if messagebox.askokcancel("Delete Note","Are you sure you want to proceed?\nThis action cannot be undone."""):
-            #delete note from database
-            ...
-        else:
-            pass
-
-
-    def edit_title(self):
-        #triggers when title double clicked, and allows the user to change the title
-        #TODO add a messagebox where u can type
-        ...
+        title = simpledialog.askstring("New Note", "Enter the title for the new note:")
+        if title:
+            content = ""
+            note_id = save_note_to_db(logged_in_user, title, content)
+            if note_id:
+                self.load_notes()
+                self.current_note_id = note_id
+                self.note_content.delete('1.0', tk.END)
+                self.select_note_by_title(title)
+            else:
+                messagebox.showerror("Error", "Failed to create new note.")
 
     def save_note(self):
-        #saves the note, and title to database
-        if messagebox.askokcancel("Save Note", "Are you sure you want to proceed?\nThis action cannot be undone."""):
-            #if no title saved
-            #   get user to add title
-            #saves / updates note to database
-            ...
+        if not self.notes_list.curselection():
+            messagebox.showinfo("Info", "Please select a note to save or create a new one.")
+            return
+        
+        title = self.notes_list.get(tk.ACTIVE)
+        content = self.note_content.get('1.0', tk.END).strip()
+        if self.current_note_id:
+            success = save_note_to_db(logged_in_user, title, content, self.current_note_id)
         else:
-            pass
-        ...
+            self.current_note_id = save_note_to_db(logged_in_user, title, content)
+            success = bool(self.current_note_id)
+        
+        if success:
+            messagebox.showinfo("Success", "Note saved successfully!")
+        else:
+            messagebox.showerror("Error", "Failed to save note.")
+
+    def delete_note(self):
+        if not self.notes_list.curselection():
+            messagebox.showinfo("Info", "Please select a note to delete.")
+            return
+        
+        if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this note?"):
+            if delete_note_from_db(self.current_note_id):
+                self.load_notes()
+                self.note_content.delete('1.0', tk.END)
+                self.current_note_id = None
+            else:
+                messagebox.showerror("Error", "Failed to delete note.")
 
     def on_select(self, event):
-        #when selected, the note itself should be pulled from the database
-        ...
-    
+        if not self.notes_list.curselection():
+            return
+        index = self.notes_list.curselection()[0]
+        title = self.notes_list.get(index)
+        note = get_note_from_db(logged_in_user, title)
+        if note:
+            self.current_note_id, content = note
+            self.note_content.delete('1.0', tk.END)
+            self.note_content.insert(tk.END, content)
+        else:
+            messagebox.showerror("Error", "Failed to load note content.")
+
+    def edit_title(self, event):
+        if not self.notes_list.curselection():
+            return
+        old_title = self.notes_list.get(self.notes_list.curselection())
+        new_title = simpledialog.askstring("Edit Title", "Enter new title:", initialvalue=old_title)
+        if new_title and new_title != old_title:
+            if update_note_title_in_db(self.current_note_id, new_title):
+                self.load_notes()
+                self.select_note_by_title(new_title)
+            else:
+                messagebox.showerror("Error", "Failed to update note title.")
+
     def load_notes(self):
-        #pull just the titles from database and insert into listbox
-        # TODO make editable/ make this working
-        note_titles = ["hey", "hello", "bye"]
-        self.note_content.insert(tk.END, *note_titles)
-        # for index, title in enumerate(note_titles):
-        #     self.note_content.insert(int(index)+1, title)
-        #make read only
+        self.notes_list.delete(0, tk.END)
+        titles = get_all_note_titles(logged_in_user)
+        for title in titles:
+            self.notes_list.insert(tk.END, title)
+        if titles:
+            self.notes_list.selection_set(0)
+            self.on_select(None)
 
-    def get_more_details(self):
-        #show other details about note eg date modified
-        ...
-
-
-class Note():
-    #TODO make this work with notes page
-    def __init__(self, title, content, date_created, date_modified, index):
-        self.title = title
-        self.content = content
-        self.date_created = date_created
-        self.date_modified = date_modified
-        self.index = index #index here counts from 1, not 0 so make sure no errors there
-        #add other relevant details
-
+    def select_note_by_title(self, title):
+        for i in range(self.notes_list.size()):
+            if self.notes_list.get(i) == title:
+                self.notes_list.selection_clear(0, tk.END)
+                self.notes_list.selection_set(i)
+                self.notes_list.see(i)
+                self.on_select(None)
+                break
 
 if __name__ == "__main__":
     app = CryptoTrackerApp()

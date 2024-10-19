@@ -164,3 +164,74 @@ def fetch_transactions(username):
         return {}
     finally:
         connection.close()
+
+
+def save_note_to_db(username, title, content, note_id=None):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    try:
+        if note_id:
+            cursor.execute("UPDATE NotesData SET title=?, content=? WHERE noteId=?", (title, content, note_id))
+            connection.commit()
+            return note_id
+        else:
+            cursor.execute("INSERT INTO NotesData (title, content, noteOwner) VALUES (?, ?, ?)", (title, content, username))
+            connection.commit()
+            return cursor.lastrowid
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return None
+    finally:
+        connection.close()
+
+def delete_note_from_db(note_id):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    try:
+        cursor.execute("DELETE FROM NotesData WHERE noteId=?", (note_id,))
+        connection.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return False
+    finally:
+        connection.close()
+
+def get_note_from_db(username, title):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    try:
+        cursor.execute("SELECT noteId, content FROM NotesData WHERE title=? AND noteOwner=?", (title, username))
+        result = cursor.fetchone()
+        return result if result else (None, "")
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return None, ""
+    finally:
+        connection.close()
+
+def get_all_note_titles(username):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    try:
+        cursor.execute("SELECT title FROM NotesData WHERE noteOwner=?", (username,))
+        titles = [row[0] for row in cursor.fetchall()]
+        return titles
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return []
+    finally:
+        connection.close()
+
+def update_note_title_in_db(note_id, new_title):
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    try:
+        cursor.execute("UPDATE NotesData SET title=? WHERE noteId=?", (new_title, note_id))
+        connection.commit()
+        return True
+    except sqlite3.Error as e:
+        print(f"An error occurred: {e}")
+        return False
+    finally:
+        connection.close()
