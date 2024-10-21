@@ -1,6 +1,4 @@
 #import libraries needed
-import sqlite3
-import matplotlib
 from frames import CryptoTrackerApp
 
 

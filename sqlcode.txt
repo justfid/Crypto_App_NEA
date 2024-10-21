@@ -21,9 +21,10 @@ FOREIGN KEY(listOwner) REFERENCES User(username)
 
 CREATE TABLE IF NOT EXISTS Transactions (
 	transactionId INTEGER PRIMARY KEY AUTOINCREMENT,
+	value FLOAT,
+	quantity FLOAT, 
 	portfolioOwner VARCHAR NOT NULL,
 	coinTicker VARCHAR NOT NULL,
-	value FLOAT,
 FOREIGN KEY(portfolioOwner) REFERENCES User(username),
 FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker)
 );
