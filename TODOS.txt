@@ -1,3 +1,4 @@
-FINISH FILTERS AND GRAPHS FOR PORTFOLI
-FIX ERRORS ON PORTFOLIO
+BUGS/ TODOS:
 
+XRP not working as intended
+error when adding transaction with invalid name

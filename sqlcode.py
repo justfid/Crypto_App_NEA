@@ -1,6 +1,6 @@
 import sqlite3
 from mathfunctions import hash_password
-from apifunctions import get_coin_ticker_with_key
+from apifunctions import get_coin_info, get_coin_ticker_with_key
 
 db_path = "CryptoApp.db"
 
@@ -46,13 +46,14 @@ def add_coin_to_list(username, coinName):
     #checks to see if its a valid coin
     coinTicker = get_coin_ticker_with_key(coinName)
     if coinTicker:
-        
         db_query = "SELECT coinName from Coin WHERE coinName = ?;"
         cursor.execute(db_query, (coinName,))
         result = cursor.fetchone()
         #checks if coin in coin table, if not it adds it
         if not result:
-            add_coin_to_database(coinTicker, coinName)
+            coin_info = get_coin_info(coinTicker)
+            if coin_info:
+                add_coin_to_database(coinTicker, coin_info['name'])
     
         query = "INSERT INTO TopcoinList (listOwner, coinTicker) VALUES (?,?);"
         try:

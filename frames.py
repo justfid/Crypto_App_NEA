@@ -1,7 +1,7 @@
 import tkinter as tk
 from tkinter import font as tkfont
-from tkinter import simpledialog, messagebox, ttk
-from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news, get_coin_ticker_with_key, get_coin_id_from_ticker
+from tkinter import simpledialog, messagebox, ttk, Toplevel
+from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news, get_coin_ticker_with_key, get_coin_info
 from mathfunctions import round_to_sf, merge, merge_sort
 from sqlcode import add_new_user, check_username_exists, add_coin_to_list, remove_coin_from_list, add_transaction_to_db, add_coin_to_database, fetch_transactions
 from sqlcode import save_note_to_db, delete_note_from_db, get_note_from_db, get_all_note_titles, update_note_title_in_db
@@ -329,76 +329,104 @@ class PriceTrackerPage(tk.Frame):
         top_coins_label = tk.Label(top_coins_frame, text="Top Coins", font=("Arial", 18), bg="#333940", fg="#FFEB3B")
         top_coins_label.pack(pady=(0, 10))
 
-        #headers for the coin list (TODO make them sortable)
-        #TODO make percentages rounded, and make market cap have commas
-        #TODO make width of header smaller, and that it cant be moved, then reduce geometry size back to 1280x720
-        columns=("Name", "Ticker", "Price (USD)", "1h Change (%)", "24h Change (%)", "7d Change (%)", "Market Cap (USD)", "Rank (Market Cap)")
+        columns = ("Name", "Ticker", "Price (USD)", "1h Change (%)", 
+                  "24h Change (%)", "7d Change (%)", "Market Cap (USD)", "Rank (Market Cap)")
         self.coin_list = ttk.Treeview(top_coins_frame, columns=columns, show="headings", height=10)
+        
+        # Set up columns with fixed widths
         for col in columns:
             self.coin_list.heading(col, text=col)
+            if col in ["Name", "Ticker"]:
+                self.coin_list.column(col, width=100, stretch=False)
+            elif col in ["Price (USD)", "1h Change (%)", "24h Change (%)", "7d Change (%)"]:
+                self.coin_list.column(col, width=120, stretch=False)
+            else:
+                self.coin_list.column(col, width=150, stretch=False)
+        
         self.coin_list.pack(fill=tk.BOTH, expand=True)
 
-        coins = get_top_coins(logged_in_user)
-        coins.reverse()
-        if len(coins) > 100:
-            coins = coins[:100]
-        data = get_price_tracker_data(coins)
-        for coin in coins:
-            self.coin_list.insert("",0,values=data[coin])
+        self.load_price_data()
 
         #configures grid
         self.grid_columnconfigure(1, weight=1)
         self.grid_rowconfigure(2, weight=1)
 
+    def load_price_data(self):
+        # Clear existing items
+        for item in self.coin_list.get_children():
+            self.coin_list.delete(item)
+            
+        coins = get_top_coins(logged_in_user)
+        if len(coins) > 100:
+            coins = coins[:100]
+            
+        data = get_price_tracker_data(coins)
+        
+        for coinid, values in data.items():
+            if values:
+                formatted_values = (
+                    values[0],                           # Name
+                    values[1].upper(),                   # Ticker
+                    f"${values[2]:,.2f}",               # Price
+                    f"{values[3]:.2f}%",                # 1h Change
+                    f"{values[4]:.2f}%",                # 24h Change
+                    f"{values[5]:.2f}%",                # 7d Change
+                    f"${values[6]:,.2f}",               # Market Cap
+                    values[7] if values[7] else "N/A"    # Rank
+                )
+                self.coin_list.insert("", 0, values=formatted_values)
+
     def add_coin(self):
-        coin = simpledialog.askstring("Add Coin", "Enter the name of the coin:").lower()
-        if coin == "xrp":
-            messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist in our database.")
-        elif coin:
-            coin = coin.strip()
-            success = add_coin_to_list(logged_in_user, coin)
-                
-            if success:
-                messagebox.showinfo("Success", f"{coin} has been added to your list.")
-                self.refresh_data()
-            else:
-                messagebox.showerror("Error", f"Failed to add {coin}. It may already be in your list or not exist in our database.")
-    
+        coin = simpledialog.askstring("Add Coin", "Enter the name of the coin:")
+        if not coin:
+            return
+            
+        coin = coin.strip().lower()
+        # Map ripple to XRP for consistency
+        if coin in ["ripple", "xrp"]:
+            coin = "xrp"
+            ticker = "rlusd"  # Use rlusd for database
+        else:
+            ticker = coin
+            
+        success = add_coin_to_list(logged_in_user, ticker)
+        if success:
+            messagebox.showinfo("Success", f"{coin.upper()} has been added to your list.")
+            self.load_price_data()
+        else:
+            messagebox.showerror("Error", f"Failed to add {coin.upper()}. It may already be in your list or not exist in our database.")
+
     def remove_coin(self):
         selected_items = self.coin_list.selection()
         if not selected_items:
             messagebox.showwarning("No Selection", "Please select a coin to remove.")
-            return None
+            return
         
-        total_coins = len(self.coin_list.get_children())
-        if total_coins == 1:
+        if len(self.coin_list.get_children()) <= 1:
             messagebox.showerror("Error", "Cannot remove the last coin. Your list must contain at least one coin.")
-            return None
+            return
     
         item = selected_items[0]
         coin_data = self.coin_list.item(item, "values")
         coin_ticker = coin_data[1]
-        if coin_ticker =="xrp":
-            coin_ticker = "rlusd"
-        confirm = messagebox.askyesno("Confirm Removal", f"Are you sure you want to remove {coin_ticker}?")
-        if confirm:
-            success = remove_coin_from_list(logged_in_user, coin_ticker)
-            if coin_ticker =="rlusd":
-                coin_ticker = "xrp"
+        
+        display_ticker = coin_ticker
+        db_ticker = "rlusd" if coin_ticker.lower() == "xrp" else coin_ticker
+        
+        if messagebox.askyesno("Confirm Removal", f"Are you sure you want to remove {display_ticker}?"):
+            success = remove_coin_from_list(logged_in_user, db_ticker)
             if success:
-                self.refresh_data()
-                messagebox.showinfo("Success", f"{coin_ticker} has been removed from your list.")
+                self.load_price_data()
+                messagebox.showinfo("Success", f"{display_ticker} has been removed from your list.")
             else:
-                messagebox.showerror("Error", f"Failed to remove {coin_ticker} from your list.")
+                messagebox.showerror("Error", f"Failed to remove {display_ticker} from your list.")
 
     def sort(self):
-        # Create a custom dialog for sorting options
         sort_dialog = tk.Toplevel(self)
         sort_dialog.title("Sort Options")
         sort_dialog.geometry("300x150")
         sort_dialog.resizable(False, False)
 
-        # Create and pack widgets
         tk.Label(sort_dialog, text="Sort by:").pack(pady=5)
         
         columns = ["Name", "Ticker", "Price (USD)", "1h Change (%)", "24h Change (%)", 
@@ -416,49 +444,41 @@ class PriceTrackerPage(tk.Frame):
             order = sort_order.get()
             reverse = order == "Descending"
             
-            # Get all items in the treeview
-            data = [(self.coin_list.set(child, column), child) for child in self.coin_list.get_children('')]
+            data = [(self.coin_list.set(child, column), child) 
+                   for child in self.coin_list.get_children('')]
 
-            # Define key function for sorting
             def key_function(item):
                 return self.convert_value(item[0], column)
 
-            # Sort the data using merge sort
             sorted_data = merge_sort(data, key_function)
 
-            # Reverse if descending order
             if reverse:
                 sorted_data.reverse()
 
-            # Rearrange items in sorted positions
             for index, (_, child) in enumerate(sorted_data):
                 self.coin_list.move(child, '', index)
 
             sort_dialog.destroy()
 
         tk.Button(sort_dialog, text="Apply", command=apply_sort).pack(pady=10)
-
-        # Wait for the dialog to be closed
         self.wait_window(sort_dialog)
 
     def convert_value(self, value, column):
         if column in ["Price (USD)", "1h Change (%)", "24h Change (%)", "7d Change (%)"]:
             return float(value.strip('%$').replace(',', ''))
         elif column == "Market Cap (USD)":
-            return int(value.strip('$').replace(',', ''))
+            return float(value.strip('$').replace(',', ''))
         elif column == "Rank (Market Cap)":
-            return int(value)
+            return float(value) if value != "N/A" else float('inf')
         else:
             return value.lower()
 
-
-        
     def go_back(self):
         self.master.go_back()
 
     def refresh_data(self):
-        self.master.refresh_page()
-    
+        self.load_price_data()
+        messagebox.showinfo("Success","Refresh Complete")
 
 class PortfolioOverviewPage(tk.Frame):
     def __init__(self, master):
@@ -478,7 +498,7 @@ class PortfolioOverviewPage(tk.Frame):
         other_buttons = [
             ("Add Transaction", self.add_transaction),
             ("Graphs", self.get_chart),
-            ("Filters", None),
+            ("Filters", self.filters),
             ("Sort By", self.sort)
         ]
         for index, (text, command) in enumerate(other_buttons):
@@ -521,31 +541,30 @@ class PortfolioOverviewPage(tk.Frame):
     def load_portfolio_data(self):
         transactions = fetch_transactions(logged_in_user)
         
-        #filters  None values and collects valid coin IDs
         valid_coin_ids = []
+        coin_info_cache = {}
+        
         for coin in transactions.keys():
-            coin_id = get_coin_id_from_ticker(coin)
-            if coin_id is not None:
-                valid_coin_ids.append(coin_id)
-            else:
-                print(f"Warning: Could not get coin ID for ticker {coin}")
-
+            coin_id = ("bitcoin" if coin.upper() == "BTC" else 
+                    "ethereum" if coin.upper() == "ETH" else 
+                    "dogecoin" if coin.upper() == "DOGE" else 
+                    "ripple" if coin.upper() in ["XRP","RLUSD"] else coin.lower())
+            valid_coin_ids.append(coin_id)
+            coin_info_cache[coin] = coin_id
+                
         if not valid_coin_ids:
             messagebox.showwarning("No Data", "No valid coin data available to display.")
             return
-
+                
         current_prices = get_price_tracker_data(valid_coin_ids)
         
         for coin, data in transactions.items():
             quantity = data['quantity']
             price_bought = data['total_value']
             
-            coin_id = get_coin_id_from_ticker(coin)
-            if coin_id is None:
-                continue 
-
+            coin_id = coin_info_cache[coin]
             coin_data = current_prices.get(coin_id, [])
-            current_price = coin_data[2] if len(coin_data) >= 3 else 0
+            current_price = coin_data[2] if coin_data and len(coin_data) >= 3 else 0
             
             if current_price == 0:
                 print(f"Warning: No price data available for {coin}")
@@ -668,9 +687,168 @@ class PortfolioOverviewPage(tk.Frame):
         else:
             return value.lower()
 
+    def filters(self):
+        filter_dialog = tk.Toplevel(self)
+        filter_dialog.title("Filter Options")
+        filter_dialog.geometry("400x300")
+        filter_dialog.resizable(False, False)
+        
+        # Value filters
+        tk.Label(filter_dialog, text="Value Filters", font=("Arial", 11, "bold")).pack(pady=(10,5))
+        value_frame = tk.Frame(filter_dialog)
+        value_frame.pack(fill="x", padx=20)
+        
+        tk.Label(value_frame, text="Min Value ($):").grid(row=0, column=0, padx=5)
+        min_value = tk.Entry(value_frame, width=15)
+        min_value.grid(row=0, column=1, padx=5)
+        
+        tk.Label(value_frame, text="Max Value ($):").grid(row=0, column=2, padx=5)
+        max_value = tk.Entry(value_frame, width=15)
+        max_value.grid(row=0, column=3, padx=5)
+        
+        # Gain/Loss filters
+        tk.Label(filter_dialog, text="Gain/Loss Filters", font=("Arial", 11, "bold")).pack(pady=(15,5))
+        gl_frame = tk.Frame(filter_dialog)
+        gl_frame.pack(fill="x", padx=20)
+        
+        tk.Label(gl_frame, text="Min G/L (%):").grid(row=0, column=0, padx=5)
+        min_gl = tk.Entry(gl_frame, width=15)
+        min_gl.grid(row=0, column=1, padx=5)
+        
+        tk.Label(gl_frame, text="Max G/L (%):").grid(row=0, column=2, padx=5)
+        max_gl = tk.Entry(gl_frame, width=15)
+        max_gl.grid(row=0, column=3, padx=5)
+        
+        # Show/Hide options
+        tk.Label(filter_dialog, text="Display Options", font=("Arial", 11, "bold")).pack(pady=(15,5))
+        options_frame = tk.Frame(filter_dialog)
+        options_frame.pack(pady=5)
+        
+        show_profit = tk.BooleanVar(value=True)
+        show_loss = tk.BooleanVar(value=True)
+        
+        tk.Checkbutton(options_frame, text="Show Profitable", variable=show_profit).pack(pady=2)
+        tk.Checkbutton(options_frame, text="Show Losses", variable=show_loss).pack(pady=2)
+        
+        def apply_filters():
+            try:
+                filters = {
+                    'min_value': float(min_value.get()) if min_value.get() else None,
+                    'max_value': float(max_value.get()) if max_value.get() else None,
+                    'min_gl': float(min_gl.get()) if min_gl.get() else None,
+                    'max_gl': float(max_gl.get()) if max_gl.get() else None,
+                    'show_profit': show_profit.get(),
+                    'show_loss': show_loss.get()
+                }
+                self.apply_portfolio_filters(filters)
+                filter_dialog.destroy()
+            except ValueError:
+                messagebox.showerror("Error", "Please enter valid numbers for all numeric fields")
 
+        def reset_filters():
+            # Reload all portfolio data
+            self.portfolio_list.delete(*self.portfolio_list.get_children())
+            self.load_portfolio_data()
+            filter_dialog.destroy()
+
+        ttk.Separator(filter_dialog, orient='horizontal').pack(fill='x', pady=15)
+        
+        # Button frame for both buttons
+        button_frame = tk.Frame(filter_dialog)
+        button_frame.pack(pady=5)
+        
+        tk.Button(button_frame, text="Apply", command=apply_filters).pack(side=tk.LEFT, padx=5)
+        tk.Button(button_frame, text="Reset", command=reset_filters).pack(side=tk.LEFT, padx=5)
+
+    def apply_portfolio_filters(self, filters):
+        items = self.portfolio_list.get_children('')
+        
+        for item in items:
+            values = self.portfolio_list.item(item)['values']
+            try:
+                current_value = float(values[3].replace('$', '').replace(',', ''))
+                gl_percent = float(values[6].replace('%', ''))
+                
+                # Check all conditions
+                if (filters['min_value'] and current_value < filters['min_value'] or
+                    filters['max_value'] and current_value > filters['max_value'] or
+                    filters['min_gl'] and gl_percent < filters['min_gl'] or
+                    filters['max_gl'] and gl_percent > filters['max_gl'] or
+                    gl_percent >= 0 and not filters['show_profit'] or
+                    gl_percent < 0 and not filters['show_loss']):
+                    self.portfolio_list.detach(item)
+                else:
+                    self.portfolio_list.reattach(item, '', 'end')
+                    
+            except (ValueError, IndexError):
+                self.portfolio_list.reattach(item, '', 'end')
+                
     def get_chart(self):
-        ...
+        # Create new window for graphs
+        graph_window = tk.Toplevel(self)
+        graph_window.title("Portfolio Analysis")
+        graph_window.geometry("800x600")
+        
+        # Get portfolio data
+        items = self.portfolio_list.get_children('')
+        
+        # Extract data for charts
+        coins = []
+        values = []
+        gains = []
+        
+        total_value = 0
+        for item in items:
+            data = self.portfolio_list.item(item)['values']
+            coin = data[0]
+            current_value = float(data[3].replace('$', '').replace(',', ''))
+            gain_loss = float(data[5].replace('$', '').replace(',', ''))
+            
+            coins.append(coin)
+            values.append(current_value)
+            gains.append(gain_loss)
+            total_value += current_value
+
+        # Calculate percentages for pie chart
+        percentages = [v/total_value * 100 for v in values]
+
+        # Create figure with subplots
+        fig = Figure(figsize=(12, 5))
+        
+        # Pie chart for allocation
+        ax1 = fig.add_subplot(121)
+        wedges, texts, autotexts = ax1.pie(percentages, labels=coins, autopct='%1.1f%%')
+        ax1.set_title('Portfolio Allocation')
+        
+        # Format pie chart text
+        plt.setp(autotexts, size=8, weight="bold")
+        plt.setp(texts, size=8)
+        
+        # Bar chart for gains/losses
+        ax2 = fig.add_subplot(122)
+        x_positions = range(len(coins))  # Create positions for bars
+        colors = ['g' if x >= 0 else 'r' for x in gains]
+        ax2.bar(x_positions, gains, color=colors)
+        ax2.set_title('Gains/Losses by Coin')
+        
+        # Properly set ticks and labels
+        ax2.set_xticks(x_positions)  # Set tick positions
+        ax2.set_xticklabels(coins, rotation=45)  # Set tick labels
+        ax2.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
+        
+        # Format layout
+        fig.tight_layout(pad=3.0)
+        
+        # Create canvas and add to window
+        canvas = FigureCanvasTkAgg(fig, master=graph_window)
+        canvas.draw()
+        canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+
+        # Add total portfolio value
+        total_label = tk.Label(graph_window, 
+                            text=f"Total Portfolio Value: ${total_value:,.2f}",
+                            font=("Arial", 12, "bold"))
+        total_label.pack(pady=10)
 
     def go_back(self):
         self.master.go_back()

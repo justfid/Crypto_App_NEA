@@ -21,13 +21,10 @@ def read_api_key(file_path):
 #CG API FUNCTIONS
 
 def get_PT_data(ids, api_key):
-    """Gathers the data for the price tracker overview"""
-    #sets up parameters and headers"
     url = "https://api.coingecko.com/api/v3/coins/markets"
     params = {
         "vs_currency": "usd",
         "ids": ",".join(ids),
-        #TODO make it ascending
         "order": "market_cap_rank",
         "per_page": 100,
         "page": 1,
@@ -42,37 +39,35 @@ def get_PT_data(ids, api_key):
     }
     
     try:
-        #makes sure the req is valid
         response = requests.get(url, params=params, headers=headers)
         response.raise_for_status()
         data = response.json()
         
         results_dict = {}
-        #formats the result into a dictionary of lists
         for coin in data:
-            results = []
-            for column in ["name", "symbol", "current_price", 
-                           "price_change_percentage_1h_in_currency", 
-                           "price_change_percentage_24h_in_currency", 
-                           "price_change_percentage_7d_in_currency", 
-                           "market_cap", "market_cap_rank"]:
-                results.append(coin[column])
-            results_dict[coin["id"]] = results
-        
+            results = [
+                coin['name'],
+                coin['symbol'],
+                coin['current_price'],
+                coin.get('price_change_percentage_1h_in_currency', 0),
+                coin.get('price_change_percentage_24h_in_currency', 0),
+                coin.get('price_change_percentage_7d_in_currency', 0),
+                coin['market_cap'],
+                coin['market_cap_rank']
+            ]
+            results_dict[coin['id']] = results
+            
         return results_dict
-    
+        
     except requests.RequestException:
         return None
-
 
 def get_price_tracker_data(coins):
     api_keys = read_api_key("coingecko_API_keys.txt")
     for key in api_keys:
-        #checks to see if api key valid
-        result = get_PT_data(coins, key) #calls the function that actually calls the api
+        result = get_PT_data(coins, key)
         if result:
-            #returns the result if valid
-            return(result)
+            return result
     return {coin: {} for coin in coins}
 
 
@@ -112,37 +107,8 @@ def get_coin_ticker_with_key(coin_name):
     return None
 
 
-def get_coin_name(coin_ticker):
-    """Retrieves the coin name for a given ticker using CoinGecko API"""
-    api_keys = read_api_key("coingecko_API_keys.txt")
-    for key in api_keys:
-        url = "https://api.coingecko.com/api/v3/coins/list"
-        params = {
-            "include_platform": "false",
-            "x_cg_demo_api_key": key
-        }
-        headers = {
-            "Accepts": "application/json",
-            "X-CG-Demo-API-Key": key
-        }
-
-        try:
-            response = requests.get(url, params=params, headers=headers)
-            response.raise_for_status()
-            coins = response.json()
-
-            for coin in coins:
-                if coin['symbol'].upper() == coin_ticker.upper():
-                    return coin['name']
-
-            return None  # Coin not found
-
-        except requests.RequestException:
-            continue  # Try the next API key
-
-    return None  # All API keys failed
-
-def get_coin_id_from_ticker(ticker):
+def get_coin_info(ticker):
+    """Gets both ID and name for a given ticker using CoinGecko API"""
     url = "https://api.coingecko.com/api/v3/coins/list"
     try:
         response = requests.get(url)
@@ -151,9 +117,8 @@ def get_coin_id_from_ticker(ticker):
         
         for coin in coins:
             if coin['symbol'].lower() == ticker.lower():
-                return coin['id']
-        
-        return None  # If no matching ticker is found
+                return {'id': coin['id'], 'name': coin['name']}
+        return None
     except requests.RequestException as e:
         print(f"Error fetching coin list: {e}")
         return None
