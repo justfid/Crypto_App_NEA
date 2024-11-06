@@ -1,9 +1,9 @@
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk, Toplevel
-from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news, get_coin_ticker_with_key, get_coin_info
+from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news, get_coin_ticker_with_key
 from mathfunctions import round_to_sf, merge, merge_sort
-from sqlcode import add_new_user, check_username_exists, add_coin_to_list, remove_coin_from_list, add_transaction_to_db, add_coin_to_database, fetch_transactions
+from sqlcode import add_new_user, check_username_exists, add_coin_to_list, remove_coin_from_list, add_transaction_to_db, add_coin_to_database, fetch_transactions, check_ticker_exists
 from sqlcode import save_note_to_db, delete_note_from_db, get_note_from_db, get_all_note_titles, update_note_title_in_db
 from utils import verify_password, get_top_coins
 import webbrowser
@@ -332,16 +332,15 @@ class PriceTrackerPage(tk.Frame):
         columns = ("Name", "Ticker", "Price (USD)", "1h Change (%)", 
                   "24h Change (%)", "7d Change (%)", "Market Cap (USD)", "Rank (Market Cap)")
         self.coin_list = ttk.Treeview(top_coins_frame, columns=columns, show="headings", height=10)
-        
-        # Set up columns with fixed widths
+
         for col in columns:
             self.coin_list.heading(col, text=col)
             if col in ["Name", "Ticker"]:
-                self.coin_list.column(col, width=100, stretch=False)
+                self.coin_list.column(col, width=100, stretch=True)
             elif col in ["Price (USD)", "1h Change (%)", "24h Change (%)", "7d Change (%)"]:
-                self.coin_list.column(col, width=120, stretch=False)
+                self.coin_list.column(col, width=120, stretch=True)
             else:
-                self.coin_list.column(col, width=150, stretch=False)
+                self.coin_list.column(col, width=150, stretch=True)
         
         self.coin_list.pack(fill=tk.BOTH, expand=True)
 
@@ -359,9 +358,8 @@ class PriceTrackerPage(tk.Frame):
         coins = get_top_coins(logged_in_user)
         if len(coins) > 100:
             coins = coins[:100]
-            
+        # [convert ticker to id to be used in get_price_tracker data]
         data = get_price_tracker_data(coins)
-        
         for coinid, values in data.items():
             if values:
                 formatted_values = (
@@ -380,7 +378,7 @@ class PriceTrackerPage(tk.Frame):
         coin = simpledialog.askstring("Add Coin", "Enter the name of the coin:")
         if not coin:
             return
-            
+        #TODO ADD TO DB
         coin = coin.strip().lower()
         # Map ripple to XRP for consistency
         if coin in ["ripple", "xrp"]:
@@ -591,7 +589,7 @@ class PortfolioOverviewPage(tk.Frame):
         
         time.sleep(0.5)
         value = simpledialog.askfloat("Add Transaction", "Enter the transaction value:")
-        if value is None:
+        if value is None or value == 0:
             messagebox.showerror("Error", "Invalid transaction value.")
             return
         value = round(float(value),2)
@@ -605,7 +603,28 @@ class PortfolioOverviewPage(tk.Frame):
             messagebox.showerror("Unexpected Error", f"An unexpected error occurred while fetching coin data.\n\nError: {str(e)}")
             return
     
-        #TODO add to coin table if not exist in db already
+        
+        #ensures no negative balance
+        current_prices = get_price_tracker_data([coin_id]) 
+        current_price = current_prices.get(coin_id, [None, None, None])[2]
+
+        if current_price is None or current_price == 0:
+            messagebox.showerror("Error", f"Unable to fetch current price for {coin_ticker} (ID: {coin_id}).")
+            return
+        
+        quantity = value / current_price
+    
+        transactions = fetch_transactions(logged_in_user)
+        current_quantity = transactions.get(coin_ticker, {'quantity': 0})['quantity']
+        
+        if value < 0 and abs(quantity) > current_quantity:
+            messagebox.showerror("Error", f"Transaction would result in negative balance. Current holdings: {current_quantity:.8f}")
+            return
+
+        #adds to db if not exists in coin table
+        exists = check_ticker_exists(coin_ticker)
+        if not exists:
+            add_coin_to_database(coin_ticker, coin_id)
 
         current_prices = get_price_tracker_data([coin_id]) 
         current_price = current_prices.get(coin_id, [None, None, None])[2]

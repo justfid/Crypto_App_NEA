@@ -1,4 +1,4 @@
 BUGS/ TODOS:
 
-XRP not working as intended
-error when adding transaction with invalid name
+check comments
+fix XRP and AVAX on price tracker

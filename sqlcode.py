@@ -1,6 +1,6 @@
 import sqlite3
 from mathfunctions import hash_password
-from apifunctions import get_coin_info, get_coin_ticker_with_key
+from apifunctions import get_coin_ticker_with_key
 
 db_path = "CryptoApp.db"
 
@@ -51,9 +51,9 @@ def add_coin_to_list(username, coinName):
         result = cursor.fetchone()
         #checks if coin in coin table, if not it adds it
         if not result:
-            coin_info = get_coin_info(coinTicker)
+            coin_info = coinName
             if coin_info:
-                add_coin_to_database(coinTicker, coin_info['name'])
+                add_coin_to_database(coinTicker, coinName)
     
         query = "INSERT INTO TopcoinList (listOwner, coinTicker) VALUES (?,?);"
         try:
@@ -236,3 +236,21 @@ def update_note_title_in_db(note_id, new_title):
         return False
     finally:
         connection.close()
+
+
+def get_coin_name_from_ticker(ticker):
+    """Gets the coin name from its ticker using the database"""
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    
+    query = "SELECT coinName FROM Coin WHERE coinTicker = ?;"
+    try:
+        cursor.execute(query, (ticker.upper(),))  # Convert to uppercase to match DB
+        result = cursor.fetchone()
+        return result[0] if result else None
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return None
+    finally:
+        connection.close()
+

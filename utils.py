@@ -37,26 +37,21 @@ def get_hashed_password(username):
     finally:
         connection.close()
 
-    
+
 def get_top_coins(username):
+    """returns the list of top coins"""
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
 
-    query = """
-    SELECT CASE 
-             WHEN UPPER(t.coinTicker) = 'BTC' THEN 'bitcoin'
-             WHEN UPPER(t.coinTicker) = 'ETH' THEN 'ethereum'
-             WHEN UPPER(t.coinTicker) = 'RLUSD' THEN 'ripple'
-             ELSE LOWER(t.coinTicker)
-           END as coin_id
-    FROM TopcoinList t 
-    WHERE listOwner = ?;
-    """
-    
+    query = "SELECT Coin.coinName FROM Coin INNER JOIN TopcoinList ON Coin.coinTicker = TopcoinList.coinTicker WHERE listOwner = ?;"
     try:
         cursor.execute(query, (username,))
         result = cursor.fetchall()
-        return [item[0] for item in result] if result else []
+        formatted_result = [item[0] for item in result]
+        if result:
+            return formatted_result
+        else:
+            return []
     except sqlite3.Error as e:
         print(f"Database error: {e}")
         return []

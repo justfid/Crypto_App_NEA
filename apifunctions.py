@@ -107,23 +107,6 @@ def get_coin_ticker_with_key(coin_name):
     return None
 
 
-def get_coin_info(ticker):
-    """Gets both ID and name for a given ticker using CoinGecko API"""
-    url = "https://api.coingecko.com/api/v3/coins/list"
-    try:
-        response = requests.get(url)
-        response.raise_for_status()
-        coins = response.json()
-        
-        for coin in coins:
-            if coin['symbol'].lower() == ticker.lower():
-                return {'id': coin['id'], 'name': coin['name']}
-        return None
-    except requests.RequestException as e:
-        print(f"Error fetching coin list: {e}")
-        return None
-
-
 #FCA API FUNCTIONS
 
 def get_exchange_rate(original_currency, new_currency):
