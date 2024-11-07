@@ -1,10 +1,12 @@
 import tkinter as tk
 from tkinter import font as tkfont
-from tkinter import simpledialog, messagebox, ttk, Toplevel
+from tkinter import simpledialog, messagebox, ttk
 from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatted_news, get_coin_ticker_with_key
-from mathfunctions import round_to_sf, merge, merge_sort
-from sqlcode import add_new_user, check_username_exists, add_coin_to_list, remove_coin_from_list, add_transaction_to_db, add_coin_to_database, fetch_transactions, check_ticker_exists
-from sqlcode import save_note_to_db, delete_note_from_db, get_note_from_db, get_all_note_titles, update_note_title_in_db
+from mathfunctions import round_to_sf, merge_sort
+from sqlcode import (add_new_user, check_username_exists, add_coin_to_list, 
+                    remove_coin_from_list, add_transaction_to_db, add_coin_to_database, 
+                    fetch_transactions, save_note_to_db, delete_note_from_db, 
+                    update_note_title_in_db, get_notes_list, get_note_content)
 from utils import verify_password, get_top_coins
 import webbrowser
 import time
@@ -358,9 +360,9 @@ class PriceTrackerPage(tk.Frame):
         coins = get_top_coins(logged_in_user)
         if len(coins) > 100:
             coins = coins[:100]
-        # [convert ticker to id to be used in get_price_tracker data]
+
         data = get_price_tracker_data(coins)
-        for coinid, values in data.items():
+        for x, values in data.items():
             if values:
                 formatted_values = (
                     values[0],                           # Name
@@ -378,12 +380,11 @@ class PriceTrackerPage(tk.Frame):
         coin = simpledialog.askstring("Add Coin", "Enter the name of the coin:")
         if not coin:
             return
-        #TODO ADD TO DB
         coin = coin.strip().lower()
-        # Map ripple to XRP for consistency
+        
         if coin in ["ripple", "xrp"]:
             coin = "xrp"
-            ticker = "rlusd"  # Use rlusd for database
+            ticker = "rlusd"  #rlusd instead of XRP
         else:
             ticker = coin
             
@@ -1047,10 +1048,10 @@ class NotesPage(tk.Frame):
     def __init__(self, master):
         super().__init__(master, bg="#607D8B")
         self.master = master
+        self.note_map = {}
         self.create_widgets()
 
     def create_widgets(self):
-        
         title_frame = tk.Frame(self, bg="#947E9E")
         title_frame.grid(row=0, column=0, sticky="w", padx=10, pady=10)
 
@@ -1061,7 +1062,6 @@ class NotesPage(tk.Frame):
                              font=("Arial", 10), padx=8, pady=4, width=8, command=self.go_back)
         back_btn.grid(row=0, column=1, padx=(0, 10), pady=10, sticky="w")
 
-        #creating other buttons
         buttons_frame = tk.Frame(self, bg="#607D8B")
         buttons_frame.grid(row=0, column=1, sticky="ne", padx=10, pady=10)
 
@@ -1076,11 +1076,9 @@ class NotesPage(tk.Frame):
                             font=("Arial", 13), padx=11, pady=6, width=9, command=command)
             btn.grid(row=0, column=index, padx=2, pady=5)
 
-        #notes section
         notes_frame = tk.Frame(self, bg="#333940", padx=10, pady=10)
         notes_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
 
-        #notes list on left
         notes_list_frame = tk.Frame(notes_frame, bg="#333940")
         notes_list_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
@@ -1092,12 +1090,10 @@ class NotesPage(tk.Frame):
         self.notes_list.bind('<<ListboxSelect>>', self.on_select)
         self.notes_list.bind("<Double-1>", self.edit_title)
 
-        #scrollbar for notes list
         notes_scrollbar = tk.Scrollbar(notes_list_frame, orient="vertical", command=self.notes_list.yview)
         notes_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.notes_list.config(yscrollcommand=notes_scrollbar.set)
 
-        #text box for notes
         note_content_frame = tk.Frame(notes_frame, bg="#333940")
         note_content_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(10, 0))
 
@@ -1107,7 +1103,6 @@ class NotesPage(tk.Frame):
         self.note_content = tk.Text(note_content_frame, wrap=tk.WORD, bg="white", fg="black", font=("Arial", 12))
         self.note_content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        #scrollbar for notes
         content_scrollbar = tk.Scrollbar(note_content_frame, orient="vertical", command=self.note_content.yview)
         content_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self.note_content.config(yscrollcommand=content_scrollbar.set)
@@ -1117,8 +1112,53 @@ class NotesPage(tk.Frame):
 
         self.load_notes()
 
-    def go_back(self):
-        self.master.go_back()
+    def load_notes(self):
+        self.notes_list.delete(0, tk.END)
+        self.note_map = {}  # Dictionary to store note IDs
+        
+        notes = get_notes_list(logged_in_user)
+        for note_id, title in notes:
+            index = self.notes_list.size()
+            self.notes_list.insert(tk.END, title)
+            self.note_map[index] = note_id
+        
+        if self.notes_list.size() > 0:
+            self.notes_list.selection_set(0)
+            self.on_select(None)
+
+    def on_select(self, event):
+        if not self.notes_list.curselection():
+            return
+
+        index = self.notes_list.curselection()[0]
+        self.current_note_id = self.note_map[index]
+        
+        # Clear current content
+        self.note_content.delete('1.0', tk.END)
+        
+        # Get content by note ID
+        content = get_note_content(self.current_note_id)
+        if content:
+            self.note_content.insert(tk.END, content)
+
+    def save_note(self):
+        if not self.notes_list.curselection():
+            messagebox.showinfo("Info", "Please select a note to save.")
+            return
+        
+        if not hasattr(self, 'current_note_id'):
+            messagebox.showerror("Error", "No note selected.")
+            return
+
+        index = self.notes_list.curselection()[0]
+        note_id = self.note_map[index]
+        title = self.notes_list.get(index)
+        content = self.note_content.get('1.0', tk.END).strip()
+        
+        if save_note_to_db(logged_in_user, title, content, note_id):
+            messagebox.showinfo("Success", "Note saved successfully!")
+        else:
+            messagebox.showerror("Error", "Failed to save note.")
 
     def new_note(self):
         title = simpledialog.askstring("New Note", "Enter the title for the new note:")
@@ -1127,85 +1167,53 @@ class NotesPage(tk.Frame):
             note_id = save_note_to_db(logged_in_user, title, content)
             if note_id:
                 self.load_notes()
-                self.current_note_id = note_id
+                # Find and select the new note
+                for i in range(self.notes_list.size()):
+                    if self.notes_list.get(i) == title:
+                        self.notes_list.selection_clear(0, tk.END)
+                        self.notes_list.selection_set(i)
+                        self.current_note_id = self.note_map[i]
+                        self.notes_list.see(i)
+                        break
+                # Clear content area
                 self.note_content.delete('1.0', tk.END)
-                self.select_note_by_title(title)
             else:
                 messagebox.showerror("Error", "Failed to create new note.")
 
-    def save_note(self):
+
+    def edit_title(self, event):
         if not self.notes_list.curselection():
-            messagebox.showinfo("Info", "Please select a note to save or create a new one.")
             return
         
-        title = self.notes_list.get(tk.ACTIVE)
-        content = self.note_content.get('1.0', tk.END).strip()
-        if self.current_note_id:
-            success = save_note_to_db(logged_in_user, title, content, self.current_note_id)
+        if hasattr(self, 'current_note_id') and self.current_note_id:
+            old_title = self.notes_list.get(self.notes_list.curselection())
+            new_title = simpledialog.askstring("Edit Title", "Enter new title:", initialvalue=old_title)
+            
+            if new_title and new_title != old_title:
+                if update_note_title_in_db(self.current_note_id, new_title):
+                    self.load_notes()
+                else:
+                    messagebox.showerror("Error", "Failed to update note title.")
         else:
-            self.current_note_id = save_note_to_db(logged_in_user, title, content)
-            success = bool(self.current_note_id)
-        
-        if success:
-            messagebox.showinfo("Success", "Note saved successfully!")
-        else:
-            messagebox.showerror("Error", "Failed to save note.")
+            messagebox.showerror("Error", "No note selected.")
 
     def delete_note(self):
         if not self.notes_list.curselection():
             messagebox.showinfo("Info", "Please select a note to delete.")
             return
         
-        if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this note?"):
-            if delete_note_from_db(self.current_note_id):
-                self.load_notes()
-                self.note_content.delete('1.0', tk.END)
-                self.current_note_id = None
-            else:
-                messagebox.showerror("Error", "Failed to delete note.")
-
-    def on_select(self, event):
-        if not self.notes_list.curselection():
-            return
-        index = self.notes_list.curselection()[0]
-        title = self.notes_list.get(index)
-        note = get_note_from_db(logged_in_user, title)
-        if note:
-            self.current_note_id, content = note
-            self.note_content.delete('1.0', tk.END)
-            self.note_content.insert(tk.END, content)
+        if hasattr(self, 'current_note_id') and self.current_note_id:
+            if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this note?"):
+                if delete_note_from_db(self.current_note_id):
+                    self.load_notes()
+                else:
+                    messagebox.showerror("Error", "Failed to delete note.")
         else:
-            messagebox.showerror("Error", "Failed to load note content.")
+            messagebox.showerror("Error", "No note selected.")
 
-    def edit_title(self, event):
-        if not self.notes_list.curselection():
-            return
-        old_title = self.notes_list.get(self.notes_list.curselection())
-        new_title = simpledialog.askstring("Edit Title", "Enter new title:", initialvalue=old_title)
-        if new_title and new_title != old_title:
-            if update_note_title_in_db(self.current_note_id, new_title):
-                self.load_notes()
-                self.select_note_by_title(new_title)
-            else:
-                messagebox.showerror("Error", "Failed to update note title.")
+    def go_back(self):
+        self.master.go_back()
 
-    def load_notes(self):
-        self.notes_list.delete(0, tk.END)
-        titles = get_all_note_titles(logged_in_user)
-        for title in titles:
-            self.notes_list.insert(tk.END, title)
-        if titles:
-            self.notes_list.selection_set(0)
-            self.on_select(None)
-
-    def select_note_by_title(self, title):
-        for i in range(self.notes_list.size()):
-            if self.notes_list.get(i) == title:
-                self.notes_list.selection_clear(0, tk.END)
-                self.notes_list.selection_set(i)
-                self.notes_list.see(i)
-                self.on_select(None)
-                break
 
 if __name__ == "__main__":
     app = CryptoTrackerApp()

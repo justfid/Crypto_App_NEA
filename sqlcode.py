@@ -168,24 +168,35 @@ def fetch_transactions(username):
 
 
 def save_note_to_db(username, title, content, note_id=None):
+    """Save or update a note in the database"""
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     try:
         if note_id:
-            cursor.execute("UPDATE NotesData SET title=?, content=? WHERE noteId=?", (title, content, note_id))
-            connection.commit()
-            return note_id
+            # Update existing note
+            cursor.execute("""
+                UPDATE NotesData 
+                SET title=?, content=? 
+                WHERE noteId=? AND noteOwner=?
+            """, (title, content, note_id, username))
         else:
-            cursor.execute("INSERT INTO NotesData (title, content, noteOwner) VALUES (?, ?, ?)", (title, content, username))
-            connection.commit()
-            return cursor.lastrowid
+            # Create new note
+            cursor.execute("""
+                INSERT INTO NotesData (title, content, noteOwner) 
+                VALUES (?, ?, ?)
+            """, (title, content, username))
+            note_id = cursor.lastrowid
+        
+        connection.commit()
+        return note_id
     except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
+        print(f"Database error: {e}")
         return None
     finally:
         connection.close()
 
 def delete_note_from_db(note_id):
+    """Delete a note from the database"""
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     try:
@@ -193,50 +204,64 @@ def delete_note_from_db(note_id):
         connection.commit()
         return True
     except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
+        print(f"Database error: {e}")
         return False
-    finally:
-        connection.close()
-
-def get_note_from_db(username, title):
-    connection = sqlite3.connect(db_path)
-    cursor = connection.cursor()
-    try:
-        cursor.execute("SELECT noteId, content FROM NotesData WHERE title=? AND noteOwner=?", (title, username))
-        result = cursor.fetchone()
-        return result if result else (None, "")
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
-        return None, ""
-    finally:
-        connection.close()
-
-def get_all_note_titles(username):
-    connection = sqlite3.connect(db_path)
-    cursor = connection.cursor()
-    try:
-        cursor.execute("SELECT title FROM NotesData WHERE noteOwner=?", (username,))
-        titles = [row[0] for row in cursor.fetchall()]
-        return titles
-    except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
-        return []
     finally:
         connection.close()
 
 def update_note_title_in_db(note_id, new_title):
+    """Update the title of a note"""
     connection = sqlite3.connect(db_path)
     cursor = connection.cursor()
     try:
-        cursor.execute("UPDATE NotesData SET title=? WHERE noteId=?", (new_title, note_id))
+        cursor.execute("""
+            UPDATE NotesData 
+            SET title=? 
+            WHERE noteId=?
+        """, (new_title, note_id))
         connection.commit()
         return True
     except sqlite3.Error as e:
-        print(f"An error occurred: {e}")
+        print(f"Database error: {e}")
         return False
     finally:
         connection.close()
 
+def get_note_content(note_id):
+    """Get content for a specific note by ID"""
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    try:
+        cursor.execute("""
+            SELECT content 
+            FROM NotesData 
+            WHERE noteId=?
+        """, (note_id,))
+        result = cursor.fetchone()
+        return result[0] if result else ""
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return ""
+    finally:
+        connection.close()
+
+def get_notes_list(username):
+    """Get list of notes with their IDs"""
+    connection = sqlite3.connect(db_path)
+    cursor = connection.cursor()
+    try:
+        cursor.execute("""
+            SELECT noteId, title 
+            FROM NotesData 
+            WHERE noteOwner=? 
+            ORDER BY noteId
+        """, (username,))
+        return cursor.fetchall()
+    except sqlite3.Error as e:
+        print(f"Database error: {e}")
+        return []
+    finally:
+        connection.close()
 
 def get_coin_name_from_ticker(ticker):
     """Gets the coin name from its ticker using the database"""
