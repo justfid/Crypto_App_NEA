@@ -5,7 +5,7 @@ from apifunctions import get_price_tracker_data, get_exchange_rate, get_formatte
 from mathfunctions import round_to_sf, merge_sort
 from sqlcode import (add_new_user, check_username_exists, add_coin_to_list, 
                     remove_coin_from_list, add_transaction_to_db, add_coin_to_database, 
-                    fetch_transactions, save_note_to_db, delete_note_from_db, 
+                    fetch_transactions, save_note_to_db, delete_note_from_db, check_ticker_exists,
                     update_note_title_in_db, get_notes_list, get_note_content)
 from utils import verify_password, get_top_coins
 import webbrowser
