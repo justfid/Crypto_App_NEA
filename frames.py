@@ -993,7 +993,8 @@ class FiatConverterPage(tk.Frame):
                                        values=self.currencies, state="readonly", width=15, font=("Arial", 12))
         self.currency1_dropdown.grid(row=0, column=0, padx=5)
 
-        swap_btn = tk.Button(currency_frame, text="Swap", bg="#4682B4", fg="white", font=("Arial", 12), width=10, command=self.swap)
+        swap_btn = tk.Button(currency_frame, text="Swap", bg="#4682B4", fg="white", font=("Arial", 12), 
+                             width=10, command=self.swap)
         swap_btn.grid(row=0, column=1, padx=5)
 
         self.currency2_dropdown = ttk.Combobox(currency_frame, textvariable=self.currency2_var, 
