@@ -11,7 +11,7 @@ def round_to_sf(x, sf=3):
 def hash_password(password):
     """hashes passsword with salt into 32 bytes - as a hex string"""
     salt = os.urandom(32) #generates random salt for password (32 bytes)
-    iterations = 100_000 #number of iterations for PBKDF2 algorithm (more means more security but longer time TODO pick a suitable value)
+    iterations = 100_000 #number of iterations for PBKDF2 algorithm (more means more security but longer time)
     key_length = 32 #length of hashed password in bytes
     
     #hashes password with PBKDF2 using sha256 within
