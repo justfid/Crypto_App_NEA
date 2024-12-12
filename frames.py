@@ -300,7 +300,8 @@ class PriceTrackerPage(tk.Frame):
         self.create_widgets()
 
     def create_widgets(self):
-        title_label = tk.Label(self, text="Price Tracker", font=("Arial", 24), bg="#947E9E", fg="white", padx=10, pady=5)
+        title_label = tk.Label(self, text="Price Tracker", font=("Arial", 24),
+                                bg="#947E9E", fg="white", padx=10, pady=5)
         title_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
 
         #button frame for other buttons
