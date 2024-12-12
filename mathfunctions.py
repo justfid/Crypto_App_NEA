@@ -24,8 +24,8 @@ def merge_sort(arr, key_function=None):
         return arr
 
     mid = len(arr) // 2
-    left = merge_sort(arr[:mid], key_function)
-    right = merge_sort(arr[mid:], key_function)
+    left = merge_sort(arr[:mid], key_function) #recursion
+    right = merge_sort(arr[mid:], key_function) #recursion
 
     return merge(left, right, key_function)
 
