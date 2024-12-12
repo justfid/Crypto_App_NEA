@@ -403,7 +403,9 @@ class PriceTrackerPage(tk.Frame):
             messagebox.showinfo("Success", f"{coin.upper()} has been added to your list.")
             self.load_price_data()
         else:
-            messagebox.showerror("Error", f"Failed to add {coin.upper()}. It may already be in your list or not exist in our database.")
+            message = f"Failed to add {coin.upper()}. It may already be in your list or not exist in our database."
+            #this for ss purposes
+            messagebox.showerror("Error", )
 
     def remove_coin(self):
         """removes chosen coin from watchlist"""
