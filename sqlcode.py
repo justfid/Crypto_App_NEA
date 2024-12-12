@@ -270,7 +270,7 @@ def get_coin_name_from_ticker(ticker):
     
     query = "SELECT coinName FROM Coin WHERE coinTicker = ?;"
     try:
-        cursor.execute(query, (ticker.upper(),))  # Convert to uppercase to match DB
+        cursor.execute(query, (ticker.upper(),))  #convert to uppercase to match DB
         result = cursor.fetchone()
         return result[0] if result else None
     except sqlite3.Error as e:
