@@ -617,7 +617,8 @@ class PortfolioOverviewPage(tk.Frame):
                 messagebox.showerror("Error", f"{coin_id} is not a valid coin")
                 return
         except Exception as e:
-            messagebox.showerror("Unexpected Error", f"An unexpected error occurred while fetching coin data.\n\nError: {str(e)}")
+            messagebox.showerror("Unexpected Error", 
+                                 f"An unexpected error occurred while fetching coin data.\n\nError: {str(e)}")
             return
     
         
@@ -635,7 +636,8 @@ class PortfolioOverviewPage(tk.Frame):
         current_quantity = transactions.get(coin_ticker, {'quantity': 0})['quantity']
         
         if value < 0 and abs(quantity) > current_quantity:
-            messagebox.showerror("Error", f"Transaction would result in negative balance. Current holdings: {current_quantity:.8f}")
+            messagebox.showerror("Error", 
+                                 f"Transaction would result in negative balance. Current holdings: {current_quantity:.8f}")
             return
 
         #adds to db if not exists in coin table
@@ -647,7 +649,8 @@ class PortfolioOverviewPage(tk.Frame):
         current_price = current_prices.get(coin_id, [None, None, None])[2]
     
         if current_price is None or current_price == 0:
-            messagebox.showerror("Error", f"Unable to fetch current price for {coin_ticker} (ID: {coin_id}).")
+            messagebox.showerror("Error", 
+                                 f"Unable to fetch current price for {coin_ticker} (ID: {coin_id}).")
             return
         
         quantity = value / current_price
