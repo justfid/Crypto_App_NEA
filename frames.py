@@ -920,7 +920,8 @@ class FiatConverterPage(tk.Frame):
         title_label = tk.Label(title_frame, text="Fiat Converter", font=("Arial", 18), bg="#947E9E", fg="white", padx=10, pady=5)
         title_label.pack(side=tk.LEFT)
 
-        back_btn = tk.Button(top_frame, text="Back", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, pady=5, command=self.go_back)
+        back_btn = tk.Button(top_frame, text="Back", bg="#333940", fg="#FFEB3B", font=("Arial", 10), padx=10, 
+                             pady=5, command=self.go_back)
         back_btn.pack(side=tk.RIGHT, padx=5)
 
         #dark grey frame
@@ -928,7 +929,8 @@ class FiatConverterPage(tk.Frame):
         content_frame.pack(expand=True, fill=tk.BOTH, padx=10, pady=10)
 
         #currency pair label
-        self.pair_label = tk.Label(content_frame, text=f"{self.currency1} - {self.currency2}", font=("Arial", 16, "bold"), bg="#333940", fg="#FFEB3B")
+        self.pair_label = tk.Label(content_frame, text=f"{self.currency1} - {self.currency2}", 
+                                   font=("Arial", 16, "bold"), bg="#333940", fg="#FFEB3B")
         self.pair_label.pack(pady=(20, 10))
 
         #white content area with dark grey border
@@ -936,7 +938,8 @@ class FiatConverterPage(tk.Frame):
         white_area.pack(expand=True, fill=tk.BOTH, padx=15, pady=15)
 
         #conversion ratio
-        self.ratio_label = tk.Label(white_area, text=f"Ratio 1 : {round_to_sf(self.rate,3) if self.rate < 1 else round(self.rate,3)}", font=("Arial", 12), bg="#4682B4", fg="white", padx=5, pady=2) #self. because needs to be edited
+        self.ratio_label = tk.Label(white_area, text=f"Ratio 1 : {round_to_sf(self.rate,3) if self.rate < 1 else round(self.rate,3)}", 
+                                    font=("Arial", 12), bg="#4682B4", fg="white", padx=5, pady=2) #self. because needs to be edited
         self.ratio_label.pack(pady=(20, 10))
 
         #conversion frame
