@@ -15,7 +15,8 @@ def hash_password(password):
     key_length = 32 #length of hashed password in bytes
     
     #hashes password with PBKDF2 using sha256 within
-    password_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, iterations, key_length) #password.encode() converts string to bytes
+    password_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt, iterations, key_length) 
+        #password.encode() converts string to bytes
     return salt.hex() + password_hash.hex() #combines salt and hash, converting both to hexadecimal strings
 
 
@@ -47,9 +48,6 @@ def merge(left, right, key_function):
     result.extend(left[i:])
     result.extend(right[j:])
     return result
-
-
-
 
 
 if __name__ == "__main__":
