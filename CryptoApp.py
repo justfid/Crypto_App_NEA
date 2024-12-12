@@ -8,8 +8,8 @@ def initialise_database():
     conn = sqlite3.connect('CryptoApp.db')
     cursor = conn.cursor()
 
-    #SQL initialization statements
-    initialization_sql = """
+    #SQL initialisation statements
+    initialisation_sql = """
     CREATE TABLE IF NOT EXISTS User (
         username VARCHAR NOT NULL UNIQUE,
         hashedPassword TEXT NOT NULL,
@@ -50,7 +50,7 @@ def initialise_database():
     """
     
     #execute each statement
-    for statement in initialization_sql.split(';'):
+    for statement in initialisation_sql.split(';'):
         if statement.strip():
             cursor.execute(statement)
     
