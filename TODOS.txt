@@ -1,4 +1,3 @@
 BUGS/ TODOS:
 
-check comments
-fix XRP and AVAX on price tracker
+DONE

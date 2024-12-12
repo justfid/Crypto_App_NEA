@@ -1,3 +1,4 @@
+#import required libraries
 import tkinter as tk
 from tkinter import font as tkfont
 from tkinter import simpledialog, messagebox, ttk
@@ -37,6 +38,7 @@ class CryptoTrackerApp(tk.Tk):
     """main application class"""
     def __init__(self):
         super().__init__()
+        #sets up main window properties
         self.title("Crypto Analysis App")
         self.geometry("1920x1080")
         self.minsize(800, 450)
@@ -45,7 +47,7 @@ class CryptoTrackerApp(tk.Tk):
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 
-        #initialises page stack
+        #creates page stack
         self.__pages_stack = []
 
         #shows login page when program ran
@@ -100,8 +102,8 @@ class CryptoTrackerApp(tk.Tk):
             self.destroy()
         
     def refresh_page(self):
+        """refreshes current page by destroying and recreating it"""
         #no error checking needed as stack will never be of length 0 in this case
-        #destroys old page
         current_page = self.__pages_stack.pop()
         page_type = type(current_page)
         current_page.destroy()
@@ -155,7 +157,7 @@ class LoginPage(tk.Frame):
                     messagebox.showerror("Error", "Incorrect Username or Password")
             
     def signup(self):
-        """creates account"""
+        """creates account - handles signup functionality"""
         dialog = LoginDialog(self, title="Signup")
         if dialog.result:
             username, password = dialog.result
@@ -171,6 +173,7 @@ class LoginPage(tk.Frame):
                     messagebox.showerror("Error", "Username Already Exists. Try Again")
     
     def add_default_coins(self, username):
+        """adds default coins (BTC and ETH) to new user's watchlist"""
         for name in ["bitcoin","ethereum"]:
             add_coin_to_list(username, name)
 
@@ -245,6 +248,7 @@ class HomePage(tk.Frame):
         self.get_more_news()
 
     def get_more_news(self):
+        """fetches and displays more news stories"""
         news_stories = get_formatted_news(f"&page={self.news_page}")
         if self.previous_news == news_stories:
             self.news_tree.insert("", "end", values=("END OF STORIES", "N/A", "N/A"), tags=("END"))
@@ -260,6 +264,7 @@ class HomePage(tk.Frame):
             self.news_page += 1
 
     def on_news_click(self, event):
+        """opens news story in browser when double clicked"""
         item = self.news_tree.selection()[0]
         link = self.news_tree.item(item, "tags")[0]
         if link == "END":
@@ -267,6 +272,7 @@ class HomePage(tk.Frame):
         else: 
             webbrowser.open_new(link)
 
+    #navigation functions
     def open_price_tracker(self):
         self.master.show_price_tracker_page()
     
@@ -353,6 +359,7 @@ class PriceTrackerPage(tk.Frame):
         self.grid_rowconfigure(2, weight=1)
 
     def load_price_data(self):
+        """fetches and displays price data for watched coins"""
         # Clear existing items
         for item in self.coin_list.get_children():
             self.coin_list.delete(item)
@@ -365,18 +372,19 @@ class PriceTrackerPage(tk.Frame):
         for x, values in data.items():
             if values:
                 formatted_values = (
-                    values[0],                           # Name
-                    values[1].upper(),                   # Ticker
-                    f"${values[2]:,.2f}",               # Price
-                    f"{values[3]:.2f}%",                # 1h Change
-                    f"{values[4]:.2f}%",                # 24h Change
-                    f"{values[5]:.2f}%",                # 7d Change
-                    f"${values[6]:,.2f}",               # Market Cap
-                    values[7] if values[7] else "N/A"    # Rank
+                    values[0],                           #name
+                    values[1].upper(),                   #ticker
+                    f"${values[2]:,.2f}",               #price
+                    f"{values[3]:.2f}%",                #1h Change
+                    f"{values[4]:.2f}%",                #24h Change
+                    f"{values[5]:.2f}%",                #7d Change
+                    f"${values[6]:,.2f}",               #market Cap
+                    values[7] if values[7] else "N/A"    #rank
                 )
                 self.coin_list.insert("", 0, values=formatted_values)
 
     def add_coin(self):
+        """handles adding a new coin to watchlist"""
         coin = simpledialog.askstring("Add Coin", "Enter the name of the coin:")
         if not coin:
             return
@@ -396,6 +404,7 @@ class PriceTrackerPage(tk.Frame):
             messagebox.showerror("Error", f"Failed to add {coin.upper()}. It may already be in your list or not exist in our database.")
 
     def remove_coin(self):
+        """removes chosen coin from watchlist"""
         selected_items = self.coin_list.selection()
         if not selected_items:
             messagebox.showwarning("No Selection", "Please select a coin to remove.")
@@ -538,6 +547,7 @@ class PortfolioOverviewPage(tk.Frame):
         self.grid_rowconfigure(2, weight=1)
 
     def load_portfolio_data(self):
+        """loads and displays portfolio transaction data"""
         transactions = fetch_transactions(logged_in_user)
         
         valid_coin_ids = []
@@ -696,7 +706,7 @@ class PortfolioOverviewPage(tk.Frame):
 
         tk.Button(sort_dialog, text="Apply", command=apply_sort).pack(pady=10)
 
-        # Wait for the dialog to be closed
+        #wait for the dialog to be closed
         self.wait_window(sort_dialog)
 
     def convert_value(self, value, column):
@@ -713,7 +723,7 @@ class PortfolioOverviewPage(tk.Frame):
         filter_dialog.geometry("400x300")
         filter_dialog.resizable(False, False)
         
-        # Value filters
+        #value filters
         tk.Label(filter_dialog, text="Value Filters", font=("Arial", 11, "bold")).pack(pady=(10,5))
         value_frame = tk.Frame(filter_dialog)
         value_frame.pack(fill="x", padx=20)
@@ -726,7 +736,7 @@ class PortfolioOverviewPage(tk.Frame):
         max_value = tk.Entry(value_frame, width=15)
         max_value.grid(row=0, column=3, padx=5)
         
-        # Gain/Loss filters
+        #gain/Loss filters
         tk.Label(filter_dialog, text="Gain/Loss Filters", font=("Arial", 11, "bold")).pack(pady=(15,5))
         gl_frame = tk.Frame(filter_dialog)
         gl_frame.pack(fill="x", padx=20)
@@ -739,7 +749,7 @@ class PortfolioOverviewPage(tk.Frame):
         max_gl = tk.Entry(gl_frame, width=15)
         max_gl.grid(row=0, column=3, padx=5)
         
-        # Show/Hide options
+        #show/Hide options
         tk.Label(filter_dialog, text="Display Options", font=("Arial", 11, "bold")).pack(pady=(15,5))
         options_frame = tk.Frame(filter_dialog)
         options_frame.pack(pady=5)
@@ -766,14 +776,14 @@ class PortfolioOverviewPage(tk.Frame):
                 messagebox.showerror("Error", "Please enter valid numbers for all numeric fields")
 
         def reset_filters():
-            # Reload all portfolio data
+            #reload all portfolio data
             self.portfolio_list.delete(*self.portfolio_list.get_children())
             self.load_portfolio_data()
             filter_dialog.destroy()
 
         ttk.Separator(filter_dialog, orient='horizontal').pack(fill='x', pady=15)
         
-        # Button frame for both buttons
+        #button frame for both buttons
         button_frame = tk.Frame(filter_dialog)
         button_frame.pack(pady=5)
         
@@ -789,7 +799,7 @@ class PortfolioOverviewPage(tk.Frame):
                 current_value = float(values[3].replace('$', '').replace(',', ''))
                 gl_percent = float(values[6].replace('%', ''))
                 
-                # Check all conditions
+                #check all conditions
                 if (filters['min_value'] and current_value < filters['min_value'] or
                     filters['max_value'] and current_value > filters['max_value'] or
                     filters['min_gl'] and gl_percent < filters['min_gl'] or
@@ -804,15 +814,15 @@ class PortfolioOverviewPage(tk.Frame):
                 self.portfolio_list.reattach(item, '', 'end')
                 
     def get_chart(self):
-        # Create new window for graphs
+        #create new window for graphs
         graph_window = tk.Toplevel(self)
         graph_window.title("Portfolio Analysis")
         graph_window.geometry("800x600")
         
-        # Get portfolio data
+        #get portfolio data
         items = self.portfolio_list.get_children('')
         
-        # Extract data for charts
+        #extract data for charts
         coins = []
         values = []
         gains = []
@@ -829,42 +839,42 @@ class PortfolioOverviewPage(tk.Frame):
             gains.append(gain_loss)
             total_value += current_value
 
-        # Calculate percentages for pie chart
+        #calculate percentages for pie chart
         percentages = [v/total_value * 100 for v in values]
 
-        # Create figure with subplots
+        #create figure with subplots
         fig = Figure(figsize=(12, 5))
         
-        # Pie chart for allocation
+        #pie chart for allocation
         ax1 = fig.add_subplot(121)
         wedges, texts, autotexts = ax1.pie(percentages, labels=coins, autopct='%1.1f%%')
         ax1.set_title('Portfolio Allocation')
         
-        # Format pie chart text
+        #format pie chart text
         plt.setp(autotexts, size=8, weight="bold")
         plt.setp(texts, size=8)
         
-        # Bar chart for gains/losses
+        #bar chart for gains/losses
         ax2 = fig.add_subplot(122)
         x_positions = range(len(coins))  # Create positions for bars
         colors = ['g' if x >= 0 else 'r' for x in gains]
         ax2.bar(x_positions, gains, color=colors)
         ax2.set_title('Gains/Losses by Coin')
         
-        # Properly set ticks and labels
+        #properly set ticks and labels
         ax2.set_xticks(x_positions)  # Set tick positions
         ax2.set_xticklabels(coins, rotation=45)  # Set tick labels
         ax2.axhline(y=0, color='black', linestyle='-', linewidth=0.5)
         
-        # Format layout
+        #format layout
         fig.tight_layout(pad=3.0)
         
-        # Create canvas and add to window
+        #create canvas and add to window
         canvas = FigureCanvasTkAgg(fig, master=graph_window)
         canvas.draw()
         canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        # Add total portfolio value
+        #add total portfolio value
         total_label = tk.Label(graph_window, 
                             text=f"Total Portfolio Value: ${total_value:,.2f}",
                             font=("Arial", 12, "bold"))
@@ -977,7 +987,7 @@ class FiatConverterPage(tk.Frame):
         self.currency2_var.trace_add('write', self.update_currency2)
 
     def swap(self):
-        """Swaps the 2 currencies, affects the rate and the output"""
+        """swaps selected currencies and updates conversion rate"""
         self.rate = 1/self.rate
         self.ratio_label.config(text=f"Ratio 1 : {round_to_sf(self.rate,3) if self.rate < 1 else round(self.rate,3)}")
         self.currency1 = self.currency2_var.get()
@@ -988,12 +998,11 @@ class FiatConverterPage(tk.Frame):
         self.add_output_data(self.convert_currency())        
 
     def on_enter_pressed(self, event):
-        """Links to the input entry box"""
+        """validates input and converts currency when enter key pressed"""
         value = self.input_entry.get()
         if not value:
             self.amount=0
             self.add_output_data(self.convert_currency())
-            # self.output_setup()
         else:
             try:
                 self.amount = float(value)
@@ -1003,13 +1012,13 @@ class FiatConverterPage(tk.Frame):
                 self.add_output_data("Error - Try Again")
 
     def on_entry_click(self, event):
-        """Links to the input entry box"""
+        """manages placeholder text in input field"""
         if self.input_entry.get() == self.placeholder_text:
             self.input_entry.delete(0, "end")
             self.input_entry.config(fg='black')
     
     def add_output_data(self, result):
-        """Adds data to output entry box"""
+        """updates output field with converted value"""
         self.output_entry.config(state='normal')
         self.output_entry.delete(0, tk.END)
         self.output_entry.insert(0, result)
@@ -1023,7 +1032,7 @@ class FiatConverterPage(tk.Frame):
         self.master.go_back()
 
     def update_currency1(self, *args):
-        """Updates currency1 chosen to reflect selected one"""
+        """updates first currency and recalculates rate"""
         self.currency1 = self.currency1_var.get()
         self.rate = get_exchange_rate(self.currency1, self.currency2)
         self.ratio_label.config(text=f"Ratio 1 : {round_to_sf(self.rate,3) if self.rate < 1 else round(self.rate,3)}")
@@ -1031,7 +1040,7 @@ class FiatConverterPage(tk.Frame):
         self.after(10, self.focus_input_entry)
 
     def update_currency2(self, *args):
-        """Updates currency2 chosen to reflect selected one"""
+        """updates second currency and recalculates rate"""
         self.currency2 = self.currency2_var.get()
         self.rate = (get_exchange_rate(self.currency1, self.currency2))
         self.ratio_label.config(text=f"Ratio 1 : {round_to_sf(self.rate,3) if self.rate < 1 else round(self.rate,3)}")
@@ -1039,9 +1048,8 @@ class FiatConverterPage(tk.Frame):
         self.after(10, self.focus_input_entry)
 
     def focus_input_entry(self):
-        """Shifts focus to the input entry, and selects whole box"""
+        """sets focus to input field and selects content"""
         self.input_entry.focus_set()
-        #self.input_entry.select_range(0, tk.END) #may comment this out later, if found to be annoying in testing
         
 
 class NotesPage(tk.Frame):
@@ -1113,8 +1121,9 @@ class NotesPage(tk.Frame):
         self.load_notes()
 
     def load_notes(self):
+        """retrieves and displays user's saved notes"""
         self.notes_list.delete(0, tk.END)
-        self.note_map = {}  # Dictionary to store note IDs
+        self.note_map = {}  #dictionary to store note IDs
         
         notes = get_notes_list(logged_in_user)
         for note_id, title in notes:
@@ -1127,21 +1136,23 @@ class NotesPage(tk.Frame):
             self.on_select(None)
 
     def on_select(self, event):
+        """loads selected note content into editor"""
         if not self.notes_list.curselection():
             return
 
         index = self.notes_list.curselection()[0]
         self.current_note_id = self.note_map[index]
         
-        # Clear current content
+        #clear current content
         self.note_content.delete('1.0', tk.END)
         
-        # Get content by note ID
+        #get content by note ID
         content = get_note_content(self.current_note_id)
         if content:
             self.note_content.insert(tk.END, content)
 
     def save_note(self):
+        """saves current note to database"""
         if not self.notes_list.curselection():
             messagebox.showinfo("Info", "Please select a note to save.")
             return
@@ -1161,13 +1172,14 @@ class NotesPage(tk.Frame):
             messagebox.showerror("Error", "Failed to save note.")
 
     def new_note(self):
+        """creates new empty note"""
         title = simpledialog.askstring("New Note", "Enter the title for the new note:")
         if title:
             content = ""
             note_id = save_note_to_db(logged_in_user, title, content)
             if note_id:
                 self.load_notes()
-                # Find and select the new note
+                #find and select the new note
                 for i in range(self.notes_list.size()):
                     if self.notes_list.get(i) == title:
                         self.notes_list.selection_clear(0, tk.END)
@@ -1175,13 +1187,14 @@ class NotesPage(tk.Frame):
                         self.current_note_id = self.note_map[i]
                         self.notes_list.see(i)
                         break
-                # Clear content area
+                #clear content area
                 self.note_content.delete('1.0', tk.END)
             else:
                 messagebox.showerror("Error", "Failed to create new note.")
 
 
     def edit_title(self, event):
+        """enables note title editing on double-click"""
         if not self.notes_list.curselection():
             return
         
@@ -1198,6 +1211,7 @@ class NotesPage(tk.Frame):
             messagebox.showerror("Error", "No note selected.")
 
     def delete_note(self):
+        """removes selected note after confirmation"""
         if not self.notes_list.curselection():
             messagebox.showinfo("Info", "Please select a note to delete.")
             return

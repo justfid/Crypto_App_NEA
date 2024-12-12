@@ -2,7 +2,7 @@ import requests
 
 #MUTUAL FUNCTIONS
 def read_api_key(file_path):
-    """Reads the API key from a file."""
+    """reads API key from a file."""
     try:
         with open(file_path, 'r') as file:
             keys = [line.strip() for line in file if line.strip()]
@@ -72,7 +72,7 @@ def get_price_tracker_data(coins):
 
 
 def get_coin_ticker(coin_name, api_key):
-    """Retrieves the ticker (symbol) for a given coin name using CoinGecko API"""
+    """retrieves ticker (symbol) for a given coin name using CoinGecko API"""
     url = "https://api.coingecko.com/api/v3/search"
     params = {
         "query": coin_name,
@@ -98,7 +98,7 @@ def get_coin_ticker(coin_name, api_key):
     
 
 def get_coin_ticker_with_key(coin_name):
-    """Attempts to get coin ticker using multiple API keys"""
+    """attempts to get coin ticker using multiple API keys"""
     api_keys = read_api_key("coingecko_API_keys.txt")
     for key in api_keys:
         result = get_coin_ticker(coin_name, key)
@@ -110,7 +110,7 @@ def get_coin_ticker_with_key(coin_name):
 #FCA API FUNCTIONS
 
 def get_exchange_rate(original_currency, new_currency):
-    """Get the exchange rate for a currency pair."""
+    """gets exchange rate for a currency pair."""
     api_url = "https://api.freecurrencyapi.com/v1/latest"
     api_keys = read_api_key("freecurrency_API_keys.txt")
     for key in api_keys: #validates the key to make sure it works

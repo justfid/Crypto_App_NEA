@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS TopcoinList (
 	coinTicker VARCHAR NOT NULL,
 PRIMARY KEY(listOwner, coinTicker),
 FOREIGN KEY(listOwner) REFERENCES User(username)
+FOREIGN KEY(coinTicker) REFERENCES Coin(coinTicker)
 );
 
 CREATE TABLE IF NOT EXISTS Transactions (
@@ -34,3 +35,4 @@ CREATE TABLE IF NOT EXISTS Coin (
 	coinName VARCHAR NOT NULL,
 PRIMARY KEY(coinTicker)
 );
+

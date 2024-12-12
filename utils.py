@@ -15,7 +15,7 @@ def verify_password(provided_password, username):
     
     #hashes provided password with the extracted salt
     new_hash = hashlib.pbkdf2_hmac('sha256', provided_password.encode(), salt, iterations, key_length)
-    #compares new hash with stored hash: == in python is a timing-safe comparison
+    #compares new hash with stored hash
     return new_hash == stored_hash
 
 def get_hashed_password(username):
@@ -28,11 +28,11 @@ def get_hashed_password(username):
         cursor.execute(query, (username,))
         result = cursor.fetchone()
         if result:
-            return result[0]  # Return the hashed password
+            return result[0]  #return the hashed password
         else:
-            return None  # User not found TODO will raise error in mathfunction if none - see if theres any case this is none
+            return None  #user not found
     except sqlite3.Error as e:
-        print(f"Database error: {e}") #TODO see if this is needed
+        print(f"Database error: {e}")
         return None
     finally:
         connection.close()
