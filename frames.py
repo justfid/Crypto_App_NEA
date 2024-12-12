@@ -499,7 +499,8 @@ class PortfolioOverviewPage(tk.Frame):
         self.create_widgets()
 
     def create_widgets(self):
-        title_label = tk.Label(self, text="Portfolio Overview", font=("Arial", 24), bg="#947E9E", fg="white", padx=10, pady=5)
+        title_label = tk.Label(self, text="Portfolio Overview", font=("Arial", 24), bg="#947E9E", 
+                               fg="white", padx=10, pady=5)
         title_label.grid(row=0, column=0, sticky="w", padx=10, pady=10)
 
         #button frame for other buttons
@@ -535,7 +536,8 @@ class PortfolioOverviewPage(tk.Frame):
         portfolio_frame = tk.Frame(self, bg="#333940", padx=10, pady=10)
         portfolio_frame.grid(row=2, column=0, columnspan=2, sticky="nsew", padx=10, pady=10)
 
-        portfolio_label = tk.Label(portfolio_frame, text="Portfolio", font=("Arial", 18), bg="#333940", fg="#FFEB3B")
+        portfolio_label = tk.Label(portfolio_frame, text="Portfolio", font=("Arial", 18), 
+                                   bg="#333940", fg="#FFEB3B")
         portfolio_label.pack(pady=(0, 10))
 
         columns=("Coin", "Price", "Quantity", "Value Now", "Value When Bought", "Gain/Loss", "% Gain/Loss")
