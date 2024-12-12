@@ -216,7 +216,8 @@ class HomePage(tk.Frame):
         ]
 
         for button_index, (button_text, command) in enumerate(buttons):
-            button = tk.Button(left_frame, text=button_text, bg="#333940", fg="#FFEB3B", font=("Arial", 10), pady=2, wraplength=100, command=command)
+            button = tk.Button(left_frame, text=button_text, bg="#333940", fg="#FFEB3B", 
+                               font=("Arial", 10), pady=2, wraplength=100, command=command)
             button.grid(row=button_index, column=0, pady=5, sticky="ew")
 
         #right frame for news
